@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
         String query=title.trim().replace(" ","+");
         Log.e("QUERY",query);
-        service.listBooks(query,10)
+        service.listBooks(query,5)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .flatMapIterable(x -> x.docs)
