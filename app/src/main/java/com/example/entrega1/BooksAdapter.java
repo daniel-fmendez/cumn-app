@@ -18,14 +18,7 @@ import com.bumptech.glide.request.RequestOptions;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
-import io.reactivex.rxjava3.schedulers.Schedulers;
-import retrofit2.HttpException;
-import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
-
-public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder>{
+public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder> {
 
     private List<Book> datos;
     private BooksAdapter adapter;
@@ -60,10 +53,10 @@ public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder>{
         // Configura el click listener para abrir la actividad de detalles
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(holder.itemView.getContext(), BookDetailActivity.class);
-            intent.putExtra("key",book.key);
-            intent.putExtra("edition_key",book.cover_edition_key);
+            intent.putExtra("key", book.key);
+            intent.putExtra("edition_key", book.cover_edition_key);
             intent.putExtra("title", book.title);
-            intent.putExtra("subtitle",book.subtitle);
+            intent.putExtra("subtitle", book.subtitle);
             intent.putStringArrayListExtra("authors", book.author_name);
             intent.putStringArrayListExtra("authors_keys", book.author_key);
             intent.putExtra("coverUrl", book.coverUrl);
@@ -83,6 +76,7 @@ public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder>{
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private TextView nombre;
         private ImageView cover;
+
         public ViewHolder(@NonNull View itemView) {
 
             super(itemView);

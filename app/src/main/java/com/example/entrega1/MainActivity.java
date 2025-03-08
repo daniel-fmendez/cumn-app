@@ -1,33 +1,29 @@
 package com.example.entrega1;
 
 import android.annotation.SuppressLint;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-
-import androidx.appcompat.widget.SearchView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
-import java.util.ArrayList;
-
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
-import io.reactivex.rxjava3.schedulers.Schedulers;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-import retrofit2.adapter.rxjava3.RxJava3CallAdapterFactory;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Optional;
+
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+
 public class MainActivity extends AppCompatActivity {
 
+    private final ArrayList<Book> datos = new ArrayList<>();
     private BooksAdapter adapter;
-    private ArrayList<Book> datos = new ArrayList<>();
 
     @SuppressLint("CheckResult")
     @Override
@@ -36,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         RecyclerView lista = findViewById(R.id.lista_cards);
-        SearchView searchView = (SearchView) findViewById(R.id.searchView);
+        SearchView searchView = findViewById(R.id.searchView);
         adapter = new BooksAdapter(datos);
         lista.setLayoutManager(new LinearLayoutManager(this));
         lista.setAdapter(adapter);
@@ -49,48 +45,53 @@ public class MainActivity extends AppCompatActivity {
         // Configuración de Retrofit
 
 
-            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-                @Override
-                public boolean onQueryTextSubmit(String query) {
-                    getBooks(query); // Lógica cuando el usuario pulsa "Buscar"
-                    return true;
-                }
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                getBooks(query); // Lógica cuando el usuario pulsa "Buscar"
+                return true;
+            }
 
-                @Override
-                public boolean onQueryTextChange(String newText) {
-                    return false;
-                }
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
 
 
-            });
+        });
 
     }
+
     @SuppressLint("CheckResult")
-    private void getBooks(String title){
+    private void getBooks(String title) {
+        if (title == null || title.trim().isEmpty()) {
+            Log.e("ERROR", "El título no puede estar vacío");
+            return;
+        }
 
-        datos=new ArrayList<Book>();
-        Retrofit retrofit = new Retrofit.Builder().baseUrl("https://openlibrary.org/")
-                .addConverterFactory(GsonConverterFactory.create()).addCallAdapterFactory(RxJava3CallAdapterFactory
-                        .create()).build();
-        BooksDataBaseService service = retrofit.create(BooksDataBaseService.class);
+        datos.clear();  // Limpiar la lista sin eliminar la referencia
 
-        String query=title.trim().replace(" ","+");
-        Log.e("QUERY",query);
-        service.listBooks(query,5)
+        String query = title.trim().replace(" ", "+");
+        Log.e("QUERY", query);
+
+        BooksDataBaseService service = RetrofitClient.getService();
+
+        service.listBooks(query, 5)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .flatMapIterable(x -> x.docs)
-                .doOnNext(apiBook -> {
-                    // Crear un nuevo objeto Book y mapear las propiedades
-
+                .flatMapIterable(response -> response.docs != null ? response.docs : new ArrayList<>())
+                .filter(Objects::nonNull)
+                .map(apiBook -> {
                     Book book = new Book();
                     book.author_key = apiBook.author_key != null ? new ArrayList<>(apiBook.author_key) : new ArrayList<>();
                     book.author_name = apiBook.author_name != null ? new ArrayList<>(apiBook.author_name) : new ArrayList<>();
                     book.cover_edition_key = apiBook.cover_edition_key != null ? apiBook.cover_edition_key : "";
-                    book.cover_i = apiBook.cover_i != 0 ? apiBook.cover_i : 0;
-                    book.coverUrl = apiBook.cover_i > 0 ? "https://covers.openlibrary.org/b/id/" + apiBook.cover_i + "-M.jpg" : null;
-                    book.edition_count = apiBook.edition_count != 0 ? apiBook.edition_count : 0;
-                    book.first_publish_year = apiBook.first_publish_year != 0 ? apiBook.first_publish_year : 0;
+                    book.cover_i = Optional.of(apiBook.cover_i).orElse(0);
+                    book.coverUrl = (Objects.nonNull(apiBook.cover_i) && apiBook.cover_i > 0)
+                            ? "https://covers.openlibrary.org/b/id/" + apiBook.cover_i + "-M.jpg"
+                            : null;
+                    book.edition_count = apiBook.edition_count;
+                    book.first_publish_year = apiBook.first_publish_year;
                     book.has_fulltext = apiBook.has_fulltext;
                     book.ia = apiBook.ia != null ? new ArrayList<>(apiBook.ia) : new ArrayList<>();
                     book.ia_collection_s = apiBook.ia_collection_s != null ? apiBook.ia_collection_s : "";
@@ -102,14 +103,17 @@ public class MainActivity extends AppCompatActivity {
                     book.lending_edition_s = apiBook.lending_edition_s != null ? apiBook.lending_edition_s : "";
                     book.lending_identifier_s = apiBook.lending_identifier_s != null ? apiBook.lending_identifier_s : "";
 
-                    // Añadir el libro mapeado a la lista
-                    datos.add(book);
+                    return book;
                 })
-                .doOnComplete(() -> adapter.notifyDataSetChanged()) // Actualizar adaptador al final
+                .toList()
                 .subscribe(
-                        book -> {}, // No necesitas acción extra aquí
+                        bookList -> {
+                            datos.addAll(bookList);
+                            adapter.notifyDataSetChanged();
+                        },
                         error -> Log.e("Error : ", error.toString())
                 );
     }
+
 
 }

@@ -15,7 +15,7 @@ public interface BooksDataBaseService {
 
     //https://covers.openlibrary.org/
     @GET("{type}/{key}/{id}-{size}.jpg")
-    Observable<BookRoot> getImage(@Path("type")String type, @Path("key") String key,
+    Observable<BookRoot> getImage(@Path("type") String type, @Path("key") String key,
                                   @Path("id") String id, @Path("size") String size);
 
 

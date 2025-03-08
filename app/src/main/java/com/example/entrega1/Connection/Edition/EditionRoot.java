@@ -1,7 +1,11 @@
 package com.example.entrega1.Connection.Edition;
 
 
-import com.example.entrega1.Connection.Work.*;
+import com.example.entrega1.Connection.Work.Author;
+import com.example.entrega1.Connection.Work.Created;
+import com.example.entrega1.Connection.Work.Description;
+import com.example.entrega1.Connection.Work.LastModified;
+import com.example.entrega1.Connection.Work.Type;
 
 import java.util.ArrayList;
 

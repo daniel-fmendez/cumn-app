@@ -2,7 +2,7 @@ package com.example.entrega1;
 
 import java.util.ArrayList;
 
-public class Book{
+public class Book {
     public ArrayList<String> author_key;
     public ArrayList<String> author_name;
     public String cover_edition_key;
@@ -22,11 +22,12 @@ public class Book{
     public String lending_identifier_s;
 
 
-    public Book(){}
+    public Book() {
+    }
 
-    public Book(String títuloDelLibro, String url) {
-        this.coverUrl=url;
-        this.title=títuloDelLibro;
+    public Book(String tituloDelLibro, String url) {
+        this.coverUrl = url;
+        this.title = tituloDelLibro;
     }
 }
 
