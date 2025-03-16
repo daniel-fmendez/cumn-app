@@ -31,8 +31,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        RecyclerView lista = findViewById(R.id.lista_cards);
-        SearchView searchView = findViewById(R.id.searchView);
+
+        RecyclerView lista = findViewById(R.id.list_book_cards);
+        SearchView searchView = findViewById(R.id.search_bar);
+
         adapter = new BooksAdapter(datos);
         lista.setLayoutManager(new LinearLayoutManager(this));
         lista.setAdapter(adapter);

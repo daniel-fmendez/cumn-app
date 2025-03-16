@@ -1,16 +1,22 @@
 package com.example.entrega1;
 
 import android.annotation.SuppressLint;
+import android.app.Dialog;
+import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.style.UnderlineSpan;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.bumptech.glide.Glide;
-import com.example.entrega1.databinding.ActivityBookDetailBinding;
+
+import com.example.entrega1.databinding.BookDetailBinding;
 
 import java.util.ArrayList;
 
@@ -22,16 +28,39 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class BookDetailActivity extends AppCompatActivity {
 
-    private ActivityBookDetailBinding binding;
+    private BookDetailBinding binding;
 
     @SuppressLint({"SetTextI18n", "CheckResult"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        binding = ActivityBookDetailBinding.inflate(getLayoutInflater());
+        binding = BookDetailBinding.inflate(getLayoutInflater());
         View view = binding.getRoot();
         setContentView(view);
+
+        //Bindings
+        {
+            binding.sinopsisText.setVisibility(View.GONE);
+            binding.sinopsisBox.setVisibility(View.GONE);
+            binding.sinopsisTitle.setVisibility(View.GONE);
+
+            binding.pagesText.setVisibility(View.GONE);
+            binding.pagesTitle.setVisibility(View.GONE);
+
+            binding.isbnTitle.setVisibility(View.GONE);
+            binding.isbnText.setVisibility(View.GONE);
+
+            binding.editorialTitle.setVisibility(View.GONE);
+            binding.editorialText.setVisibility(View.GONE);
+
+            binding.publicationText.setVisibility(View.GONE);
+            binding.publicationTitle.setVisibility(View.GONE);
+
+            binding.detailsBox.setVisibility(View.GONE);
+        }
+        binding.arrowBack.setOnClickListener(v -> finish());
+        //API PART
 
         String key = getIntent().getStringExtra("key").replace("/works/", "");
         String editionKey = getIntent().getStringExtra("edition_key");
@@ -47,28 +76,25 @@ public class BookDetailActivity extends AppCompatActivity {
 
 
         // Configuración de Retrofit
-        Retrofit retrofit = new Retrofit.Builder().baseUrl("https://openlibrary.org/")
-                .addConverterFactory(GsonConverterFactory.create()).addCallAdapterFactory(RxJava3CallAdapterFactory
-                        .create()).build();
-        WorkDataBaseService service = retrofit.create(WorkDataBaseService.class);
+
+        BooksDataBaseService service = RetrofitClient.getService();
 
         service.getWork(key)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnNext(work -> {
                     // Crear un nuevo objeto Book y mapear las propiedades
-
                     if (!work.description.value.trim().isEmpty()) {
-
-                        binding.sinopsisText.setText(work.description.value);
                         binding.sinopsisText.setVisibility(View.VISIBLE);
                         binding.sinopsisBox.setVisibility(View.VISIBLE);
                         binding.sinopsisTitle.setVisibility(View.VISIBLE);
+
+                        binding.sinopsisText.setText(work.description.value);
+
                     }
                 })
                 .subscribe(
-                        work -> {
-                        }, // No necesitas acción extra aquí
+                        result -> {},
                         error -> Log.e("Error Work: ", error.toString())
                 );
 
@@ -79,21 +105,37 @@ public class BookDetailActivity extends AppCompatActivity {
                     .doOnNext(edition -> {
                         // Crear un nuevo objeto Book y mapear las propiedades
                         if (edition.number_of_pages > 0) {
-                            binding.pagesText.setText("Pages\n" + Integer.toString(edition.number_of_pages));
+                            binding.detailsBox.setVisibility(View.VISIBLE);
                             binding.pagesText.setVisibility(View.VISIBLE);
+                            binding.pagesTitle.setVisibility(View.VISIBLE);
+
+                            binding.pagesText.setText(Integer.toString(edition.number_of_pages));
+
+                        }
+
+                        if(!edition.isbn_13.isEmpty()){
+                            binding.isbnTitle.setVisibility(View.VISIBLE);
+                            binding.isbnText.setVisibility(View.VISIBLE);
+
+                            binding.isbnText.setText(edition.isbn_13.get(0));
                         }
 
                         ArrayList<String> publishers = edition.publishers;
 
-                        if (!publishers.isEmpty()) {
-                            binding.editorialText.setText("Editorial\n" + edition.publishers.get(0));
+                        if (!publishers.isEmpty() && !publishers.get(0).isEmpty()) {
+                            binding.detailsBox.setVisibility(View.VISIBLE);
+                            binding.editorialTitle.setVisibility(View.VISIBLE);
                             binding.editorialText.setVisibility(View.VISIBLE);
-                            Log.e("Actualizado=", Integer.toString(binding.editorialText.getVisibility()));
+
+                            binding.editorialText.setText(edition.publishers.get(0));
                         }
 
                         if (!edition.publish_date.trim().isEmpty()) {
-                            binding.publishDateText.setText("Publicación\n" + edition.publish_date.trim());
-                            binding.publishDateText.setVisibility(View.VISIBLE);
+                            binding.detailsBox.setVisibility(View.VISIBLE);
+                            binding.publicationText.setVisibility(View.VISIBLE);
+                            binding.publicationTitle.setVisibility(View.VISIBLE);
+
+                            binding.publicationText.setText(edition.publish_date.trim());
                         }
 
                     })
@@ -107,39 +149,46 @@ public class BookDetailActivity extends AppCompatActivity {
                     );
         }
 
-        binding.titleText.setText(title);
-        if (!subtitle.isEmpty()) {
-            Log.e("SUBTITLE", "subtitulo no vacio:" + subtitle);
-            binding.subtitle.setText(subtitle);
-        } else {
-            Log.e("SUBTITLE", "subtitulo vacio");
-            binding.subtitle.setVisibility(View.GONE);
-            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) binding.coverDetail.getLayoutParams();
-            params.topToBottom = R.id.title_text;
-            binding.coverDetail.setLayoutParams(params);
-        }
+        binding.bookTitle.setText(title);
 
         if (!coverUrl.isEmpty()) {
             Glide.with(this)
                     .load(coverUrl.replace("M.jpg", "L.jpg"))
-                    .into(binding.coverDetail);
+                    .into(binding.cover);
+
+            binding.cover.setOnClickListener( v -> {
+                    Dialog dialog = new Dialog(this);
+                    dialog.setContentView(R.layout.dialog_image);
+
+                    // Encontrar el ImageView dentro del diálogo
+                    ImageView imageFullScreen = dialog.findViewById(R.id.imageFullScreen);
+                    Glide.with(dialog.getContext())
+                            .load(coverUrl.replace("M.jpg", "L.jpg"))
+                            .override(820,820)
+                            .into(imageFullScreen);
+
+                        imageFullScreen.setOnClickListener(v1 -> dialog.dismiss());
+
+                        dialog.show();
+                    }
+            );
         }
         if (authors.isEmpty()) {
-            binding.autorTitle.setVisibility(View.GONE);
-            binding.autorText.setVisibility(View.GONE);
-
-            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) binding.sinopsisTitle.getLayoutParams();
-            params.topToBottom = R.id.first_publication;
-            binding.sinopsisTitle.setLayoutParams(params);
+            binding.authorName.setVisibility(View.GONE);
         } else {
-            binding.autorText.setText(authors.get(0));
-        }
+            SpannableString spannableString = new SpannableString(authors.get(0));
+            spannableString.setSpan(new UnderlineSpan(),0,spannableString.length(),0);
+            binding.authorName.setText(spannableString);
+            binding.authorName.setTextColor(Color.parseColor("#4F46E5"));
+            if(!authors_keys.isEmpty()){
+                binding.authorName.setOnClickListener(v -> {
+                    Intent intent = new Intent(this, AuthorProfileActivity.class);
+                    intent.putExtra("author_key",authors_keys.get(0));
 
+                    this.startActivity(intent);
+                });
+            }
 
-        if (first_published_year > 0) {
-            binding.firstPublication.setText(Integer.toString(first_published_year));
-        } else {
-            binding.firstPublication.setVisibility(View.GONE);
         }
 
 

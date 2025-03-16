@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Entrega1</string>
+    <string name="app_name">BadWrites</string>
 
     <string name="article_text">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent est ligula, molestie a enim sed, consequat rutrum sem. Maecenas porta laoreet libero quis molestie. Proin facilisis dignissim neque, feugiat ultrices nisi consectetur eu. Morbi massa sem, auctor eu magna in, feugiat tempor leo. Nunc a sodales metus, vel aliquet libero. Sed pellentesque et elit posuere semper. Maecenas blandit aliquam risus, eu finibus velit blandit non. Integer scelerisque tincidunt enim nec gravida. Phasellus risus lorem, varius ac fringilla id, accumsan et odio. Aenean dapibus vulputate faucibus. Fusce vulputate erat nec purus sollicitudin ornare.
@@ -13,4 +13,6 @@
 
 
     </string>
+    <string name="title_string">BuscaBooks</string>
+    <string name="results_string">Resultados</string>
 </resources>

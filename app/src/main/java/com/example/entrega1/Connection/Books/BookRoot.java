@@ -1,4 +1,6 @@
-package com.example.entrega1;
+package com.example.entrega1.Connection.Books;
+
+import com.example.entrega1.Book;
 
 import java.util.ArrayList;
 

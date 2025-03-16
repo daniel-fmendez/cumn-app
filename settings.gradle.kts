@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Entrega1"
+rootProject.name = "CUM-APP2"
 include(":app")
  

@@ -21,7 +21,6 @@ import java.util.List;
 public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder> {
 
     private List<Book> datos;
-    private BooksAdapter adapter;
 
     public BooksAdapter(ArrayList<Book> datos) {
         this.datos = datos;
@@ -31,7 +30,7 @@ public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder> 
     @Override
     public BooksAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent,
                                                       int viewType) {
-        View mView = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item, parent, false);
+        View mView = LayoutInflater.from(parent.getContext()).inflate(R.layout.card_book, parent, false);
         return new ViewHolder(mView);
     }
 
@@ -40,7 +39,12 @@ public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull BooksAdapter.ViewHolder holder, int position) {
 
         Book book = datos.get(position);
-        holder.nombre.setText(book.title);
+        holder.titulo.setText(book.title);
+        Log.e("Test",holder.titulo.getText().toString());
+        if(!book.author_name.isEmpty()){
+            holder.autor.setText(book.author_name.get(0));
+        }
+
         if (book.coverUrl != null) {
             Log.d("COVER_URL", "Cargando imagen desde cache: " + book.coverUrl);
 
@@ -51,7 +55,7 @@ public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder> 
 
         }
         // Configura el click listener para abrir la actividad de detalles
-        holder.itemView.setOnClickListener(v -> {
+       holder.cover.setOnClickListener(v -> {
             Intent intent = new Intent(holder.itemView.getContext(), BookDetailActivity.class);
             intent.putExtra("key", book.key);
             intent.putExtra("edition_key", book.cover_edition_key);
@@ -74,14 +78,17 @@ public class BooksAdapter extends RecyclerView.Adapter<BooksAdapter.ViewHolder> 
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        private TextView nombre;
+        private TextView titulo;
+        private TextView autor;
         private ImageView cover;
+        private ImageView favorite;
 
         public ViewHolder(@NonNull View itemView) {
-
             super(itemView);
-            nombre = itemView.findViewById(R.id.nombre);
-            cover = itemView.findViewById(R.id.cover);
+            titulo = itemView.findViewById(R.id.short_title); // Título del libro
+            autor = itemView.findViewById(R.id.textView3);  // Autor del libro
+            cover = itemView.findViewById(R.id.imageView2); // Imagen del libro
+            favorite = itemView.findViewById(R.id.imageView3); // Icono de favorito
         }
     }
 }

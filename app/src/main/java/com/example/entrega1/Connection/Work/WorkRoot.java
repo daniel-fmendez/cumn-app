@@ -4,7 +4,7 @@ import com.example.entrega1.Connection.Edition.Language;
 import com.example.entrega1.Connection.Edition.Notes;
 import com.example.entrega1.Connection.Edition.TableOfContent;
 import com.example.entrega1.Connection.Edition.Work;
-import com.example.entrega1.Identifiers;
+import com.example.entrega1.Connection.Books.Identifiers;
 
 import java.util.ArrayList;
 
