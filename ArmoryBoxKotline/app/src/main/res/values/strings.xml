@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">ArmoryBoxKotline</string>
+
+    <string name="welcomeTitle">¡Bienvenido a Armory Box!</string>
+    <string name="welcomeSubtitle">Tu arsenal para Flesh and Blood</string>
+
+    <string-array name="welcome_messages">
+        <item>La estrategia perfecta comienza con la colección perfecta</item>
+        <item>Cada carta es un arma. Cada mazo, una batalla</item>
+        <item>Forja tu destino, carta a carta.</item>
+        <item>Domina el campo con conocimiento y estrategia.</item>
+        <item>Arma tu mazo. Despierta tu leyenda.</item>
+        <item>El poder no está en la suerte... está en tu preparación.</item>
+        <item>Tu próxima victoria comienza aquí.</item>
+        <item>Colecciona con sabiduría. Juega con maestría.</item>
+        <item>No es solo un mazo. Es tu legado.</item>
+        <item>Planifica. Perfecciona. Prevalece.</item>
+        <item>Cada carta tiene una historia. ¿Ya conoces la tuya?</item>
+        <item>Explora. Organiza. Conquista.</item>
+        <item>Tu arsenal siempre contigo.</item>
+    </string-array>
+</resources>
