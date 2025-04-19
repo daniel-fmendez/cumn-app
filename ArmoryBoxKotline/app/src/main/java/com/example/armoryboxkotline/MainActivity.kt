@@ -74,7 +74,7 @@ fun MainScreen() {
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                TopAppBar()
+                TopAppBar(navController)
             }
         },
         bottomBar = { BottomNavigationBar(navController) }
@@ -111,6 +111,12 @@ fun MainScreen() {
                 val cardId = backStackEntry.arguments?.getString("cardId")
                 DetailsScreen(navController,cardId ?: "")
             }
+            composable(route = Screen.Profile.rout) {
+                ProfileScreen(navController)
+            }
+            composable(route = Screen.EditProfile.rout) {
+                EditProfileScreen(navController)
+            }
         }
 
         NavHost(
@@ -124,7 +130,7 @@ fun MainScreen() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBar() {
+fun TopAppBar(navController: NavController) {
     //val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     TopAppBar(
         title = {
@@ -148,7 +154,9 @@ fun TopAppBar() {
                         width = 1.5.dp,
                         color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
-                    ),
+                    )
+                    .clickable { navController.navigate(Screen.Profile.rout)},
+
                 contentAlignment = Alignment.Center
             ) {
                 Text(

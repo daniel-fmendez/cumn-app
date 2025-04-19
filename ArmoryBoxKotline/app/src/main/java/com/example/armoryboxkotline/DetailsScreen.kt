@@ -180,7 +180,6 @@ fun DetailsScreen(navController: NavController, card: String){
 
 @Composable
 fun FakeTopBar(navController: NavController,name: String){
-
     Box (
         modifier = Modifier
             .fillMaxWidth()
