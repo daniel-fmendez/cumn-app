@@ -167,20 +167,20 @@ fun ProfileScreen(navController: NavController){
                     contentAlignment = Alignment.CenterStart,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight()
+                        .wrapContentHeight()
                         .padding(16.dp)
                         .background(MaterialTheme.colorScheme.surface,RoundedCornerShape(10.dp))
                         .clip(RoundedCornerShape(10.dp))
                 ){
                     Column (
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     )
                     {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                         ) {
@@ -213,6 +213,48 @@ fun ProfileScreen(navController: NavController){
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                             contentDescription = "Agregar",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Cerrar Sesión",
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    IconButton(
+                                        onClick = { },
+                                        modifier = Modifier.size(32.dp) // Ícono más pequeño, centrado
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                            contentDescription = "Cerrar Sesión",
                                             tint = MaterialTheme.colorScheme.primary,
                                         )
                                     }

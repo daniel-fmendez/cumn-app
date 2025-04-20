@@ -30,7 +30,7 @@ fun HomeScreen(navController: NavController){
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()) // 👈 Scroll vertical // 👈 Espaciado opcional
+                .verticalScroll(rememberScrollState()) // Scroll vertical
         ) {
             Spacer(modifier = Modifier.height(10.dp))
             WelcomeBox()

@@ -117,6 +117,9 @@ fun MainScreen() {
             composable(route = Screen.EditProfile.rout) {
                 EditProfileScreen(navController)
             }
+            composable(route = Screen.AccessScreen.rout) {
+                AccessScreen(navController)
+            }
         }
 
         NavHost(
@@ -155,7 +158,11 @@ fun TopAppBar(navController: NavController) {
                         color = MaterialTheme.colorScheme.primary,
                         shape = CircleShape
                     )
-                    .clickable { navController.navigate(Screen.Profile.rout)},
+                    .clickable {
+                        //Profile
+                        navController.navigate(Screen.Profile.rout)
+                        navController.navigate(Screen.AccessScreen.rout)
+                   },
 
                 contentAlignment = Alignment.Center
             ) {

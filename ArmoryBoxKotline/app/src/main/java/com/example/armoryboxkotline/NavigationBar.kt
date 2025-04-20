@@ -32,6 +32,7 @@ sealed class Screen(val rout: String) {
     }
     object Profile : Screen("profile")
     object EditProfile : Screen("editProfile")
+    object AccessScreen : Screen("accessScreen")
 }
 val navigationItems = listOf(
     NavigationItem(
