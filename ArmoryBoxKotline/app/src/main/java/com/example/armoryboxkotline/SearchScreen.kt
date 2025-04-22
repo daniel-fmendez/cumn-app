@@ -26,12 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import java.util.UUID
 
 @Composable
 fun SearchScreen(navController: NavController){
     Box (modifier = Modifier
         .fillMaxSize(),
-
     ){
         SearchBar(navController)
     }
@@ -48,27 +48,27 @@ fun SearchBar(navController: NavController) {
 
     val focusManager = LocalFocusManager.current
     val items = listOf(
-        "Command and Conquer",
-        "Art of War",
-        "Enlightened Strike",
-        "Tome of Fyendal",
-        "Bloodrush Bellow",
-        "Channel Lake Frigid",
-        "Spinal Crush",
-        "Red in the Ledger",
-        "Phantasmaclasm",
-        "Cranial Crush",
-        "Remorseless",
-        "Soul Reaping",
-        "Ravenous Rabble",
-        "Sigil of Solace",
-        "Pummel",
-        "Scar for a Scar",
-        "Flick Knives",
-        "Death Touch",
-        "Reckless Swing",
-        "Steelblade Supremacy",
-        "Gorganian Tome"
+        Card(UUID.randomUUID().toString(), "Command and Conquer", "Attack Action", 1, 2),
+        Card(UUID.randomUUID().toString(), "Art of War", "Action", 1, 1),
+        Card(UUID.randomUUID().toString(), "Enlightened Strike", "Attack Action", 1, 2),
+        Card(UUID.randomUUID().toString(), "Tome of Fyendal", "Action", 2, 1),
+        Card(UUID.randomUUID().toString(), "Bloodrush Bellow", "Brute Action", 1, 2),
+        Card(UUID.randomUUID().toString(), "Channel Lake Frigid", "Ice Action", 2, 2),
+        Card(UUID.randomUUID().toString(), "Spinal Crush", "Attack Action", 3, 2),
+        Card(UUID.randomUUID().toString(), "Red in the Ledger", "Arrow Attack", 1, 2),
+        Card(UUID.randomUUID().toString(), "Phantasmaclasm", "Attack Action", 3, 1),
+        Card(UUID.randomUUID().toString(), "Cranial Crush", "Attack Action", 2, 1),
+        Card(UUID.randomUUID().toString(), "Remorseless", "Arrow Attack", 1, 2),
+        Card(UUID.randomUUID().toString(), "Soul Reaping", "Runeblade Attack", 2, 1),
+        Card(UUID.randomUUID().toString(), "Ravenous Rabble", "Attack Action", 1, 3),
+        Card(UUID.randomUUID().toString(), "Sigil of Solace", "Defense Reaction", 1, 3),
+        Card(UUID.randomUUID().toString(), "Pummel", "Attack Reaction", 2, 3),
+        Card(UUID.randomUUID().toString(), "Scar for a Scar", "Attack Action", 1, 3),
+        Card(UUID.randomUUID().toString(), "Flick Knives", "Attack Reaction", 1, 1),
+        Card(UUID.randomUUID().toString(), "Death Touch", "Attack Action", 1, 2),
+        Card(UUID.randomUUID().toString(), "Reckless Swing", "Defense Reaction", 0, 2),
+        Card(UUID.randomUUID().toString(), "Steelblade Supremacy", "Warrior Action", 1, 1),
+        Card(UUID.randomUUID().toString(), "Gorganian Tome", "Action", 0, 1)
     )
 
     // Filtrar cuando se haya activado búsqueda Y considerar searchQuery

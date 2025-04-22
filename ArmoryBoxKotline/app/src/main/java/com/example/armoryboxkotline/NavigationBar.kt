@@ -33,6 +33,9 @@ sealed class Screen(val rout: String) {
     object Profile : Screen("profile")
     object EditProfile : Screen("editProfile")
     object AccessScreen : Screen("accessScreen")
+    object DeckDetails : Screen("decks/details/{deckId}") {
+        fun createRoute(deckId: String) = "decks/details/$deckId"
+    }
 }
 val navigationItems = listOf(
     NavigationItem(

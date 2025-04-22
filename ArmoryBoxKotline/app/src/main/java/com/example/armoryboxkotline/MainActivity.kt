@@ -1,8 +1,6 @@
 package com.example.armoryboxkotline
 
 import android.os.Bundle
-import android.os.Parcelable
-import android.telecom.Call.Details
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,13 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,10 +29,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.createGraph
 import androidx.navigation.navArgument
-import androidx.versionedparcelable.ParcelField
+import com.example.armoryboxkotline.UserManagement.AccessScreen
+import com.example.armoryboxkotline.UserManagement.EditProfileScreen
+import com.example.armoryboxkotline.UserManagement.ProfileScreen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
-import com.example.armoryboxkotline.ui.theme.Gold
-import kotlinx.parcelize.Parcelize
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,8 +50,7 @@ class MainActivity : ComponentActivity() {
 /**
  * Representacion de juguete de los datos de la carta
  */
-@Parcelize
-data class Card(val id: String, val name: String) : Parcelable
+
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -90,6 +86,7 @@ fun MainScreen() {
             )
         }
         val graph = navController.createGraph(startDestination = Screen.Home.rout) {
+            val sharedDeckViewModel: SharedDeckViewModel = viewModel()
             composable(route = Screen.Home.rout) {
                 HomeScreen(navController)
             }
@@ -97,7 +94,7 @@ fun MainScreen() {
                 SearchScreen(navController)
             }
             composable(route = Screen.Decks.rout) {
-                DecksScreen()
+                DecksScreen(navController,sharedDeckViewModel)
             }
             composable(route = Screen.Collection.rout) {
                 CollectionScreen()
@@ -119,6 +116,16 @@ fun MainScreen() {
             }
             composable(route = Screen.AccessScreen.rout) {
                 AccessScreen(navController)
+            }
+
+            composable(
+                route = Screen.DeckDetails.rout,
+                arguments = listOf(
+                    navArgument("deckId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val deckId = backStackEntry.arguments?.getString("deckId")
+                DeckDetails(navController,sharedDeckViewModel)
             }
         }
 
