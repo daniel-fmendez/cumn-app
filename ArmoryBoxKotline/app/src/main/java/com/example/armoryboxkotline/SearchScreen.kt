@@ -177,7 +177,8 @@ fun SearchBar(navController: NavController) {
                         verticalArrangement = Arrangement.spacedBy(8.dp) // Añade espaciado vertical
                     ) {
                         filteredItems.forEach { item ->
-                            CustomCard(navController,item)
+                            //Cambiar por la carta
+                            CustomCard(navController,item.name)
                         }
                     }
                 }

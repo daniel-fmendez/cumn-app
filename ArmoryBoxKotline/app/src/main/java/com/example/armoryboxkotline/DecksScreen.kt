@@ -41,7 +41,11 @@ data class Card(
     val type: String,
     val pitch: Int = 1,
     val quantity: Int = 1
-) : Parcelable
+) : Parcelable {
+    fun contains(searchQuery: String, ignoreCase: Boolean): Boolean {
+        return name.equals(searchQuery,ignoreCase) ;
+    }
+}
 
 @Parcelize
 data class Deck(
