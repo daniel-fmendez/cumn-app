@@ -40,10 +40,10 @@ data class Card(
     val name: String,
     val type: String,
     val pitch: Int = 1,
-    val quantity: Int = 1
+    var quantity: Int = 0
 ) : Parcelable {
     fun contains(searchQuery: String, ignoreCase: Boolean): Boolean {
-        return name.equals(searchQuery,ignoreCase) ;
+        return name.contains(searchQuery,ignoreCase) ;
     }
 }
 
@@ -64,8 +64,26 @@ class SharedDeckViewModel : ViewModel() {
     var selectedDeck by mutableStateOf<Deck?>(null)
         private set
 
-    fun selectDeck(deck: Deck) {
+    var decks by mutableStateOf<List<Deck>>(emptyList())
+        private set
+
+    fun selectDeck(deck: Deck?) {
         selectedDeck = deck
+    }
+
+    fun updateDeck(updatedDeck: Deck) {
+        // actualizarlo
+        decks = if (decks.any { it.id == updatedDeck.id }) {
+            decks.map { if (it.id == updatedDeck.id) updatedDeck else it }
+        } else {
+            //añadirlo a la lista
+            decks + updatedDeck
+        }
+
+        // Actualizar el mazo seleccionado
+        if (selectedDeck?.id == updatedDeck.id) {
+            selectedDeck = updatedDeck
+        }
     }
 }
 
@@ -179,6 +197,13 @@ fun DeckTopbar(){
 
 @Composable
 fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewModel,deck: Deck){
+    fun getQuantity(cards: List<Card>): Int {
+        var quantity = 0
+        for (card in cards) {
+            quantity += card.quantity
+        }
+        return quantity
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -247,7 +272,7 @@ fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewMo
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        val cards = deck.cards.size
+                        val cards = getQuantity(deck.cards)
                         val maxCards = deck.type.cardLimit
                         val progress = cards.toFloat() / maxCards.toFloat()
 

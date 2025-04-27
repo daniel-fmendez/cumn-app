@@ -1,8 +1,10 @@
 package com.example.armoryboxkotline
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
@@ -15,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -41,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
+import java.util.UUID
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -49,42 +53,42 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 
     var deckName by remember { mutableStateOf("") }
     var selectedDeckType by remember { mutableStateOf(DeckType.Blitz) }
-    var cards by remember { mutableStateOf(0) }
-    var maxCard = selectedDeckType.cardLimit
+
+    var deckCards by remember { mutableStateOf<List<Card>>(emptyList()) }
+
+    val totalCards = deckCards.sumOf { it.quantity }
+    val maxCards = selectedDeckType.cardLimit
+
 
     //Search
     var searchQuery by remember { mutableStateOf("") }
     var searchTriggered by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    val items = listOf(
-        "Command and Conquer",
-        "Art of War",
-        "Enlightened Strike",
-        "Tome of Fyendal",
-        "Bloodrush Bellow",
-        "Channel Lake Frigid",
-        "Spinal Crush",
-        "Red in the Ledger",
-        "Phantasmaclasm",
-        "Cranial Crush",
-        "Remorseless",
-        "Soul Reaping",
-        "Ravenous Rabble",
-        "Sigil of Solace",
-        "Pummel",
-        "Scar for a Scar",
-        "Flick Knives",
-        "Death Touch",
-        "Reckless Swing",
-        "Steelblade Supremacy",
-        "Gorganian Tome"
-    )
-
-    val filteredItems = remember(searchTriggered, searchQuery) {
-        if (searchTriggered) {
-            items.filter { it.contains(searchQuery, ignoreCase = true) }
-        } else emptyList()
+    val items = remember {
+        listOf(
+            Card(UUID.randomUUID().toString(), "Command and Conquer", "Attack Action", 1),
+            Card(UUID.randomUUID().toString(), "Art of War", "Action", 1),
+            Card(UUID.randomUUID().toString(), "Enlightened Strike", "Attack Action", 1),
+            Card(UUID.randomUUID().toString(), "Tome of Fyendal", "Action", 2),
+            Card(UUID.randomUUID().toString(), "Bloodrush Bellow", "Brute Action", 1),
+            Card(UUID.randomUUID().toString(), "Channel Lake Frigid", "Ice Action", 2),
+            Card(UUID.randomUUID().toString(), "Spinal Crush", "Attack Action", 3),
+            Card(UUID.randomUUID().toString(), "Red in the Ledger", "Arrow Attack", 1),
+            Card(UUID.randomUUID().toString(), "Phantasmaclasm", "Attack Action", 3),
+            Card(UUID.randomUUID().toString(), "Cranial Crush", "Attack Action", 2),
+            Card(UUID.randomUUID().toString(), "Remorseless", "Arrow Attack", 1),
+            Card(UUID.randomUUID().toString(), "Soul Reaping", "Runeblade Attack", 2),
+            Card(UUID.randomUUID().toString(), "Ravenous Rabble", "Attack Action", 1),
+            Card(UUID.randomUUID().toString(), "Sigil of Solace", "Defense Reaction", 1),
+            Card(UUID.randomUUID().toString(), "Pummel", "Attack Reaction", 2),
+            Card(UUID.randomUUID().toString(), "Scar for a Scar", "Attack Action", 1),
+            Card(UUID.randomUUID().toString(), "Flick Knives", "Attack Reaction", 1),
+            Card(UUID.randomUUID().toString(), "Death Touch", "Attack Action", 1),
+            Card(UUID.randomUUID().toString(), "Reckless Swing", "Defense Reaction", 0),
+            Card(UUID.randomUUID().toString(), "Steelblade Supremacy", "Warrior Action", 1),
+            Card(UUID.randomUUID().toString(), "Gorganian Tome", "Action", 0)
+        )
     }
 
     //Inicializa valores
@@ -92,10 +96,55 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
         if (deck != null) {
             deckName = deck.name
             selectedDeckType = deck.type
-            cards = deck.cards.size
+            deckCards = deck.cards.toList()
         }
     }
+    fun findCardInDeck(cardId: String): Card? {
+        return deckCards.find { it.id == cardId }
+    }
 
+    fun updateCardQuantity(cardToUpdate: Card, newQuantity: Int) {
+        Log.d("DeckUpdate", "Intentando actualizar: ${cardToUpdate.name} con cantidad: $newQuantity")
+
+        if (newQuantity <= 0) {
+            Log.d("DeckUpdate", "Cantidad <= 0, eliminando carta: ${cardToUpdate.name}")
+            deckCards = deckCards.filter { it.id != cardToUpdate.id }
+        } else {
+            deckCards.forEach {
+                Log.d("DeckUpdate", "Card in deck -> ID: ${it.id}, Name: ${it.name}, Quantity: ${it.quantity}")
+            }
+
+            Log.d("DeckUpdate", "ID to find: ${cardToUpdate.id}")
+            val existingCard = deckCards.find { it.id == cardToUpdate.id }
+
+            if (existingCard != null) {
+                Log.d("DeckUpdate", "Carta ya en mazo. Actualizando cantidad.")
+                deckCards = deckCards.map {
+                    if (it.id == cardToUpdate.id) it.copy(quantity = newQuantity) else it
+                }
+            } else {
+                Log.d("DeckUpdate", "Carta nueva. Añadiendo con cantidad: $newQuantity")
+                val cardToAdd = cardToUpdate.copy(quantity = newQuantity)
+                deckCards = deckCards + cardToAdd
+            }
+        }
+
+        Log.d("DeckUpdate", "Cartas en mazo tras actualización: ${deckCards.map { "${it.name} x${it.quantity}" }}")
+    }
+
+    fun canAddMoreCards(): Boolean {
+        return totalCards < maxCards
+    }
+    val filteredItems = remember(searchTriggered, searchQuery, deckCards) {
+        if (searchTriggered) {
+            items.map { card ->
+                // Buscar si esta carta ya existe en el mazo
+                val deckCard = deckCards.find { it.id == card.id }
+                // Si existe en el mazo, usar esa versión; de lo contrario, usar la original
+                deckCard ?: card
+            }.filter { it.contains(searchQuery, ignoreCase = true) }
+        } else emptyList()
+    }
     Column(modifier = Modifier.fillMaxSize()) {
         // Top bar siempre fijo en la parte superior
         deck?.let {
@@ -232,7 +281,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                     textAlign = TextAlign.Start
                                 )
                                 Text(
-                                    text = "$cards/$maxCard",
+                                    text = "$totalCards/$maxCards",
                                     color = MaterialTheme.colorScheme.primary,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
@@ -241,7 +290,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
-                            var progress = cards.toFloat()/maxCard.toFloat()
+                            var progress = totalCards.toFloat()/maxCards.toFloat()
                             LinearProgressIndicator(
                                 progress = { progress },
                                 modifier = Modifier
@@ -401,7 +450,17 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 filteredItems.forEach { item ->
-                                    CustomCard(navController, item)
+                                    val itemQuantityInDeck = item.quantity
+                                    val maxAllowed = maxCards - (totalCards - itemQuantityInDeck)
+
+                                    DeckCard(
+                                        navController = navController,
+                                        card = item,  // Pasar la carta con la cantidad actualizada
+                                        maxAllowed = maxAllowed,
+                                        onQuantityChanged = { card, newQuantity ->
+                                            updateCardQuantity(card, newQuantity)
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -435,7 +494,21 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 
                 // Botón Guardar
                 Button(
-                    onClick = { /* Acción guardar */ },
+                    onClick = {
+                        val updatedDeck = if (deck != null) {
+                            deck.copy(name = deckName, type = selectedDeckType, cards = deckCards)
+                        } else {
+                            Deck(
+                                name = deckName,
+                                type = selectedDeckType,
+                                cards = deckCards
+                            )
+                        }
+
+                        sharedDeckViewModel.updateDeck(updatedDeck)
+
+                        navController.popBackStack()
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onSurface
@@ -509,7 +582,6 @@ fun DeckTypeButton(
 }
 @Composable
 fun HeroCard() {
-    var rarity = "Majestic"
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -598,6 +670,223 @@ fun HeroCard() {
     }
 }
 
+@Composable
+fun DeckCard(
+    navController: NavController,
+    card: Card,
+    maxAllowed: Int = Int.MAX_VALUE,
+    onQuantityChanged: (Card, Int) -> Unit
+) {
+    //var quantity by remember { mutableStateOf()  }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surface),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            // Imagen de la carta
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .wrapContentHeight(align = Alignment.Top),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
+                        .width(50.dp)
+                        .height(65.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Arte",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Información de la carta
+            Box(
+                modifier = Modifier
+                    .weight(4f)
+                    .fillMaxHeight()
+                    .padding(vertical = 12.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(start = 16.dp),
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    Text(
+                        text = card.name,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Clase · ${card.type}",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            // Controles de cantidad
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(2f)
+                    .fillMaxHeight()
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+            ) {
+                if (card.quantity== 0) {
+                    // Botón para añadir la primera carta
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (maxAllowed > 0) {
+                                    onQuantityChanged(card, 1)
+                                }
+
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Agregar",
+                                tint = if (maxAllowed > 0)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
+                } else {
+                    // Controles para cartas ya añadidas (mostrar cantidad y botones +/-)
+                    Row {
+                        // Botón de restar
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(vertical = 12.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        onQuantityChanged(card, card.quantity - 1)
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.minus),
+                                        contentDescription = "Quitar",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Mostrar cantidad
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
+                                        shape = CircleShape
+                                    )
+                                    .defaultMinSize(minWidth = 32.dp)
+                                    .wrapContentSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = card.quantity.toString(),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                        }
+
+                        // Botón de añadir
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (card.quantity < maxAllowed){
+                                            onQuantityChanged(card, card.quantity + 1)
+                                        }
+
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Agregar",
+                                        tint = if (card.quantity < maxAllowed)
+                                            MaterialTheme.colorScheme.primary
+                                        else
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 @Preview(showBackground = true)
 @Composable
 fun PreviewDetails(){
@@ -605,5 +894,7 @@ fun PreviewDetails(){
     val sharedDeckViewModel: SharedDeckViewModel = viewModel()
     ArmoryBoxKotlineTheme () {
         DeckDetails(navController,sharedDeckViewModel)
+        var carta = Card(UUID.randomUUID().toString(), "Gorganian Tome", "Action", 1,2)
+        //DeckCard(navController,carta)
     }
 }
