@@ -14,6 +14,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,8 +31,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.armoryboxkotline.Conection.Controller.CollectionViewModel
+import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
+import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.FakeTopBar
 import com.example.armoryboxkotline.R
 import com.example.armoryboxkotline.Screen
@@ -38,6 +44,21 @@ import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
 
 @Composable
 fun ProfileScreen(navController: NavController){
+    val collectionViewModel: CollectionViewModel = viewModel()
+    val collection by collectionViewModel.collection.collectAsState()
+
+    val deckViewModel: DecksViewModel = viewModel()
+    val decks by deckViewModel.decks.collectAsState()
+
+    val numberOfDecks = decks.size
+    var nickname = SessionManager.nickname ?: ""
+    val numberOfCards = collection.size
+
+    LaunchedEffect(Unit) {
+        deckViewModel.userDecks(SessionManager.userId!!)
+        collectionViewModel.userCollection(SessionManager.userId!!)
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         Column {
@@ -70,17 +91,17 @@ fun ProfileScreen(navController: NavController){
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text= "Nombre de usuario",
+                    text= nickname,
                     style= MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 //Una idea
-                Text(
+                /*Text(
                     text= "Subtitulo",
                     style= MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
-                )
+                )*/
                 Spacer(Modifier.height(24.dp))
                 Box(
                     contentAlignment = Alignment.CenterStart,
@@ -118,7 +139,7 @@ fun ProfileScreen(navController: NavController){
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
-                                    text = "14",
+                                    text = numberOfDecks.toString(),
                                     modifier = Modifier.padding(8.dp),
                                     color = MaterialTheme.colorScheme.primary,
                                     style = MaterialTheme.typography.headlineMedium,
@@ -148,7 +169,7 @@ fun ProfileScreen(navController: NavController){
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
-                                    text = "347",
+                                    text = numberOfCards.toString(),
                                     modifier = Modifier.padding(8.dp),
                                     color = MaterialTheme.colorScheme.primary,
                                     style = MaterialTheme.typography.headlineMedium,
@@ -246,7 +267,12 @@ fun ProfileScreen(navController: NavController){
                                     contentAlignment = Alignment.Center
                                 ) {
                                     IconButton(
-                                        onClick = { },
+                                        onClick = {
+                                            SessionManager.userId = null
+                                            SessionManager.nickname = null
+
+                                            navController.popBackStack()
+                                        },
                                         modifier = Modifier.size(32.dp) // Ícono más pequeño, centrado
                                     ) {
                                         Icon(

@@ -29,6 +29,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.createGraph
 import androidx.navigation.navArgument
+import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.UserManagement.AccessScreen
 import com.example.armoryboxkotline.UserManagement.EditProfileScreen
 import com.example.armoryboxkotline.UserManagement.ProfileScreen
@@ -94,10 +95,22 @@ fun MainScreen() {
                 SearchScreen(navController)
             }
             composable(route = Screen.Decks.rout) {
-                DecksScreen(navController,sharedDeckViewModel)
+                var id = SessionManager.userId ?: -1
+                if(id != -1){
+                    DecksScreen(navController,sharedDeckViewModel)
+                }else{
+                    EmpryScreen("Inicia sesión para ver tus mazos")
+                }
+
             }
             composable(route = Screen.Collection.rout) {
-                CollectionScreen()
+                var id = SessionManager.userId ?: -1
+                if(id != -1){
+                    CollectionScreen()
+                }else{
+                    EmpryScreen("Inicia sesión para ver tu colección")
+                }
+
             }
             composable(
                 route = Screen.Details.rout,
@@ -167,8 +180,11 @@ fun TopAppBar(navController: NavController) {
                     )
                     .clickable {
                         //Profile
-                        navController.navigate(Screen.Profile.rout)
-                        navController.navigate(Screen.AccessScreen.rout)
+                        if(SessionManager.userId!=null){
+                            navController.navigate(Screen.Profile.rout)
+                        }else{
+                            navController.navigate(Screen.AccessScreen.rout)
+                        }
                    },
 
                 contentAlignment = Alignment.Center

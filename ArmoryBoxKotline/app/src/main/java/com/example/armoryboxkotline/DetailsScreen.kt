@@ -27,8 +27,10 @@ import androidx.compose.material3.*
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,140 +46,183 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.armoryboxkotline.Conection.Controller.CardRoot
+import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DetailsScreen(navController: NavController, card: String){
+fun DetailsScreen(navController: NavController, cardId: String){
+    val cardsViewModel = viewModel<CardsViewModel>()
+    val card by cardsViewModel.card.observeAsState(initial = null)
     val scrollState = rememberLazyListState()
     val topBarHeight = 64.dp
 
-    // Determinar si el usuario ha hecho scroll para mostrar la topbar
-    val showTopBar by remember {
-        derivedStateOf {
-            scrollState.firstVisibleItemIndex > 0 ||
-                    (scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset > 250)
-        }
+    LaunchedEffect(cardId) {
+        cardsViewModel.fetchCardById(cardId)
     }
+    if(card == null){
+        EmpryScreen("Problema al encontrar la carta")
+    }else{
+        val thisCard = card!!
+        // Determinar si el usuario ha hecho scroll para mostrar la topbar
+        val showTopBar by remember {
+            derivedStateOf {
+                scrollState.firstVisibleItemIndex > 0 ||
+                        (scrollState.firstVisibleItemIndex == 0 && scrollState.firstVisibleItemScrollOffset > 250)
+            }
+        }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Contenido principal con la imagen y el texto
-        LazyColumn(
-            state = scrollState,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                // Imagen superior
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
-                ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Contenido principal con la imagen y el texto
+            LazyColumn(
+                state = scrollState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                item {
+                    // Imagen superior
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(250.dp)
-                            .background(Color.LightGray),
-                        contentAlignment = Alignment.Center
                     ) {
-                        ExpandableCardArtView(
-                            resourceId = R.drawable.placeholder,
-                            isFullArt = false // Cambia a true para cartas full art
-                        )
-                    }
-
-                    // Solo mostramos este botón de regreso si la topbar no está visible
-                    if (!showTopBar) {
-                        IconButton(
-                            onClick = { navController.popBackStack() },
+                        Box(
                             modifier = Modifier
-                                .padding(16.dp)
-                                .align(Alignment.TopStart)
-                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .background(Color.LightGray),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Atrás",
-                                tint = Color.White
+                            ExpandableCardArtView(
+                                resourceId = R.drawable.placeholder,
+                                isFullArt = false // Cambia a true para cartas full art
                             )
+                        }
+
+                        // Solo mostramos este botón de regreso si la topbar no está visible
+                        if (!showTopBar) {
+                            IconButton(
+                                onClick = { navController.popBackStack() },
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .align(Alignment.TopStart)
+                                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Atrás",
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            item {
-                Column() {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(color = MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(
-                                    bottomStart = 16.dp,
-                                    bottomEnd = 16.dp
+                item {
+                    Column() {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(
+                                        bottomStart = 16.dp,
+                                        bottomEnd = 16.dp
+                                    )
                                 )
-                            )
-                            .padding(16.dp),
-                    ) {
-                        Column {
-                            Text(
-                                text = card,
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(
-                                modifier = Modifier.height(2.dp)
-                            )
-                            Text(
-                                text = "Subtitulo",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(
-                                modifier = Modifier.height(16.dp)
-                            )
+                                .padding(16.dp),
+                        ) {
+                            Column {
+                                Text(
+                                    text = thisCard.name,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(
+                                    modifier = Modifier.height(2.dp)
+                                )
+                                thisCard.types
+                                fun generateSubtitle(list: List<String> ): String {
+                                    var result = ""
+                                    list.forEach{ item ->
+                                        if(result.isEmpty()){
+                                            result += item
+                                        }else{
+                                            result += (" · "+item)
+                                        }
+                                    }
+                                    return result
+                                }
+                                Text(
+                                    text = generateSubtitle(thisCard.types),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(
+                                    modifier = Modifier.height(16.dp)
+                                )
 
-                            FlowRow(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                                verticalArrangement = Arrangement.spacedBy(10.dp) // Añade espaciado vertical
-                            ) {
-                                ValueBox("Pitch","2")
-                                ValueBox("Cost","3")
-                                ValueBox("Defense","3")
-                                ValueBox("Pitch Value","Red (1)", Color.Red)
+                                FlowRow(
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp) // Añade espaciado vertical
+                                ) {
+                                    if(!thisCard.pitch.isEmpty()){
+                                        ValueBox("Pitch",thisCard.pitch)
+                                    }
+                                    if(!thisCard.cost.isEmpty()){
+                                        ValueBox("Cost",thisCard.cost)
+                                    }
+                                    if(!thisCard.power.isEmpty()){
+                                        ValueBox("Power",thisCard.power)
+                                    }
+                                    if(!thisCard.defense.isEmpty()){
+                                        ValueBox("Defense",thisCard.defense)
+                                    }
+                                    if(!thisCard.health.isEmpty()){
+                                        ValueBox("Health",thisCard.health)
+                                    }
+                                    if(!thisCard.intelligence.isEmpty()){
+                                        ValueBox("Intelligence",thisCard.intelligence)
+                                    }
+                                    if(!thisCard.arcane.isEmpty()){
+                                        ValueBox("Arcane",thisCard.arcane)
+                                    }
+                                }
+
+                                Spacer(
+                                    modifier = Modifier.height(16.dp)
+                                )
+
+                                CardText(thisCard.functionalText)
                             }
 
-                            Spacer(
-                                modifier = Modifier.height(16.dp)
-                            )
-
-                            CardText()
                         }
-
+                        Spacer(modifier = Modifier.height(16.dp))
+                        TitleBar("Edicion de prueba")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        VersionCard()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Mucho contenido...".repeat(100))
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TitleBar("Edicion de prueba")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    VersionCard()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Mucho contenido...".repeat(100))
                 }
             }
-        }
 
-        // TopBar que aparece solo al hacer scroll
-        AnimatedVisibility(
-            visible = showTopBar,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut() + slideOutVertically(),
-            modifier = Modifier.align(Alignment.TopCenter)
-        ) {
-            FakeTopBar(navController, name = card)
+            // TopBar que aparece solo al hacer scroll
+            AnimatedVisibility(
+                visible = showTopBar,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                FakeTopBar(navController, name = thisCard.name)
+            }
         }
     }
+
 }
 
 @Composable
@@ -268,7 +313,7 @@ fun ValueBox(title: String, value: String, color: Color = MaterialTheme.colorSch
 }
 
 @Composable
-fun CardText(){
+fun CardText(text: String){
     Column (
         modifier = Modifier
             .fillMaxWidth(),
@@ -291,7 +336,7 @@ fun CardText(){
                 .padding(12.dp)
         ){
             Text(
-                text = "Romper 6. Si Crippling Crush golpea a un héroe, destruye todos los equipamientos que controla.",
+                text = text,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Left,

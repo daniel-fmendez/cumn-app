@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,15 +29,27 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.example.armoryboxkotline.Conection.Controller.CardRoot
+import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import java.util.UUID
 
 @Composable
 fun SearchScreen(navController: NavController){
+    val cardsViewModel = viewModel<CardsViewModel>()
+    val cards by cardsViewModel.cards.collectAsState()
+    val cardImages by cardsViewModel.cardImages.collectAsState()
+
     Box (modifier = Modifier
         .fillMaxSize(),
     ){
-        SearchBar(navController)
+        SearchBar(navController, cardsViewModel, cards, cardImages)
     }
 }
 data class CardItem (
@@ -42,40 +58,20 @@ data class CardItem (
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun SearchBar(navController: NavController) {
+fun SearchBar(
+    navController: NavController,
+    cardsViewModel: CardsViewModel,
+    cards: List<CardRoot>,
+    cardImages: Map<String, String?>
+) {
     var searchQuery by remember { mutableStateOf("") }
     var searchTriggered by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
-    val items = listOf(
-        Card(UUID.randomUUID().toString(), "Command and Conquer", "Attack Action", 1, 2),
-        Card(UUID.randomUUID().toString(), "Art of War", "Action", 1, 1),
-        Card(UUID.randomUUID().toString(), "Enlightened Strike", "Attack Action", 1, 2),
-        Card(UUID.randomUUID().toString(), "Tome of Fyendal", "Action", 2, 1),
-        Card(UUID.randomUUID().toString(), "Bloodrush Bellow", "Brute Action", 1, 2),
-        Card(UUID.randomUUID().toString(), "Channel Lake Frigid", "Ice Action", 2, 2),
-        Card(UUID.randomUUID().toString(), "Spinal Crush", "Attack Action", 3, 2),
-        Card(UUID.randomUUID().toString(), "Red in the Ledger", "Arrow Attack", 1, 2),
-        Card(UUID.randomUUID().toString(), "Phantasmaclasm", "Attack Action", 3, 1),
-        Card(UUID.randomUUID().toString(), "Cranial Crush", "Attack Action", 2, 1),
-        Card(UUID.randomUUID().toString(), "Remorseless", "Arrow Attack", 1, 2),
-        Card(UUID.randomUUID().toString(), "Soul Reaping", "Runeblade Attack", 2, 1),
-        Card(UUID.randomUUID().toString(), "Ravenous Rabble", "Attack Action", 1, 3),
-        Card(UUID.randomUUID().toString(), "Sigil of Solace", "Defense Reaction", 1, 3),
-        Card(UUID.randomUUID().toString(), "Pummel", "Attack Reaction", 2, 3),
-        Card(UUID.randomUUID().toString(), "Scar for a Scar", "Attack Action", 1, 3),
-        Card(UUID.randomUUID().toString(), "Flick Knives", "Attack Reaction", 1, 1),
-        Card(UUID.randomUUID().toString(), "Death Touch", "Attack Action", 1, 2),
-        Card(UUID.randomUUID().toString(), "Reckless Swing", "Defense Reaction", 0, 2),
-        Card(UUID.randomUUID().toString(), "Steelblade Supremacy", "Warrior Action", 1, 1),
-        Card(UUID.randomUUID().toString(), "Gorganian Tome", "Action", 0, 1)
-    )
 
     // Filtrar cuando se haya activado búsqueda Y considerar searchQuery
-    val filteredItems = remember(searchTriggered, searchQuery) {
-        if (searchTriggered) {
-            items.filter { it.contains(searchQuery, ignoreCase = true) }
-        } else emptyList()
+    val filteredItems = remember(searchTriggered, cards) {
+        if (searchTriggered) cards else emptyList()
     }
 
     Column(modifier = Modifier
@@ -111,6 +107,7 @@ fun SearchBar(navController: NavController) {
                 leadingIcon = {
                     IconButton(onClick = {
                         if (searchQuery.isNotBlank()) {
+                            cardsViewModel.searchCard(searchQuery)
                             searchTriggered = true
                             focusManager.clearFocus()
                         }
@@ -137,6 +134,7 @@ fun SearchBar(navController: NavController) {
                 keyboardActions = KeyboardActions(
                     onSearch = {
                         if (searchQuery.isNotBlank()) {
+                            cardsViewModel.searchCard(searchQuery)
                             searchTriggered = true
                             focusManager.clearFocus()
                         }
@@ -176,9 +174,10 @@ fun SearchBar(navController: NavController) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                         verticalArrangement = Arrangement.spacedBy(8.dp) // Añade espaciado vertical
                     ) {
-                        filteredItems.forEach { item ->
+                        filteredItems.forEach { card ->
                             //Cambiar por la carta
-                            CustomCard(navController,item.name)
+                            val imageUrl = cardImages[card.uniqueId]
+                            CustomCard(navController, card, imageUrl ?: "")
                         }
                     }
                 }
@@ -188,7 +187,7 @@ fun SearchBar(navController: NavController) {
 }
 
 @Composable
-fun CustomCard(navController: NavController,name: String) {
+fun CustomCard(navController: NavController, card: CardRoot, imageUrl: String) {
     //val parts = name.split(" ")
 
     Box(
@@ -215,15 +214,38 @@ fun CustomCard(navController: NavController,name: String) {
                     .background(MaterialTheme.colorScheme.surface)
                     .clickable {
                         //Pasar la id de la carta
-                        navController.navigate(Screen.Details.createRoute(name))
+                        navController.navigate(Screen.Details.createRoute(card.uniqueId))
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Arte",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                if (imageUrl != null && imageUrl.isNotEmpty()) {
+                    // Cargar la imagen con placeholder para errores y carga
+                    SubcomposeAsyncImage(
+                        model = imageUrl,
+                        contentDescription = "Arte de la carta",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                        loading = {
+                            Box(Modifier.fillMaxSize()) {
+                                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                            }
+                        },
+                        error = {
+                            Text(
+                                text = "Arte no disponible",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                } else {
+                    // Si no hay URL de imagen
+                    Text(
+                        text = "Arte",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(
@@ -232,7 +254,7 @@ fun CustomCard(navController: NavController,name: String) {
 
             // Contenedor para el texto con altura flexible y menos espacio
             Text(
-                text = name,
+                text = card.name,
                 fontSize = 10.sp,
                 lineHeight = 12.sp,
                 color = MaterialTheme.colorScheme.onSurface,

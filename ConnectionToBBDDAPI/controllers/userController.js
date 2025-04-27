@@ -1,14 +1,19 @@
 const { client } = require('../config/db');
+const bcrypt = require('bcrypt');
 
 // Registrar nuevo usuario
 const registerUser = async (req, res) => {
-    const { nickname, email, password_hash } = req.body;
-  
+    const { nickname, email, password } = req.body;
+    // Aquí 'password' es el hash SHA-256 de la contraseña original
+    
     try {
+        // Aplica bcrypt al hash SHA-256 recibido
+        const password_hash = password
         const result = await client.query(
-            'INSERT INTO public.users (nickname, email, password_hash) VALUES ($1, $2, $3) RETURNING *', 
+            'INSERT INTO public.users (nickname, email, password_hash) VALUES ($1, $2, $3) RETURNING *',
             [nickname, email, password_hash]
         );
+        
         res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error("Error en registerUser:", err);
@@ -19,18 +24,20 @@ const registerUser = async (req, res) => {
 // Login de usuario
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
-
+    // Aquí 'password' es el hash SHA-256 de la contraseña original
+    
     try {
         const result = await client.query(
             'SELECT * FROM public.users WHERE email = $1',
             [email]
         );
-
+        
         if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Usuario no encontrado' });
         }
-
+        
         const user = result.rows[0];
+
         if (password === user.password_hash) {
             res.json({
                 id: user.id,
@@ -44,7 +51,6 @@ const loginUser = async (req, res) => {
         res.status(500).send("Error interno");
     }
 };
-
 // Actualizar carta en la colección del usuario
 const updateUserCard = async (req, res) => {
     const { user_id, card_id, quantity } = req.body;

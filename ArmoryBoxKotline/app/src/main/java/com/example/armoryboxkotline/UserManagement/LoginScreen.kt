@@ -1,5 +1,6 @@
 package com.example.armoryboxkotline.UserManagement
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,9 +37,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.armoryboxkotline.Conection.Controller.AccessViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.armoryboxkotline.FakeTopBar
 import com.example.armoryboxkotline.R
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
+import java.security.MessageDigest
 
 @Composable
 fun AccessScreen(navController: NavController){
@@ -123,8 +128,8 @@ fun AccessScreen(navController: NavController){
                     Spacer(modifier = Modifier.height(16.dp))
 
                     when (selectedIndex) {
-                        0 -> LoginTab()
-                        1 -> RegisterTab()
+                        0 -> LoginTab(navController)
+                        1 -> RegisterTab(navController)
                     }
                 }
             }
@@ -133,11 +138,11 @@ fun AccessScreen(navController: NavController){
 }
 
 @Composable
-fun LoginTab(){
-    var username by remember { mutableStateOf("") }
+fun LoginTab(navController: NavController, viewModel: AccessViewModel = viewModel()){
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val loginResult by viewModel.loginResult.observeAsState(initial = false)
 
     Box(
         modifier = Modifier
@@ -235,7 +240,29 @@ fun LoginTab(){
             Spacer(Modifier.height(32.dp))
 
             Button(
-                onClick = { },
+                onClick = {
+
+                    if(!email.isEmpty() && !password.isEmpty()){
+                        viewModel.login(email, password)
+
+                        Log.e("Login", "Email "+email)
+                        Log.e("Login", "Password "+password)
+
+                        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
+                        val preHashedPassword = bytes.joinToString("") { "%02x".format(it) }
+
+                        Log.e("Login", "Hash "+preHashedPassword)
+                        if(loginResult){
+                            navController.popBackStack()
+                        }else{
+                            email = ""
+                            password = ""
+                        }
+                        navController.popBackStack()
+                    }
+
+
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -256,7 +283,7 @@ fun LoginTab(){
 }
 
 @Composable
-fun RegisterTab(){
+fun RegisterTab(navController: NavController, viewModel: AccessViewModel = viewModel()){
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -264,6 +291,7 @@ fun RegisterTab(){
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
+    val registerResult by viewModel.registerResult.observeAsState(initial = false)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -451,7 +479,36 @@ fun RegisterTab(){
             Spacer(Modifier.height(32.dp))
 
             Button(
-                onClick = { },
+                onClick = {
+                    var valid = !email.isEmpty() && !password.isEmpty()
+                            && !username.isEmpty() && !confirmPassword.isEmpty() &&(password.equals(confirmPassword))
+                    if(valid) {
+                        Log.e("Register", "Email "+email)
+                        Log.e("Register", "Password "+password)
+
+                        Log.e("Register", "Confirm "+confirmPassword)
+                        Log.e("Register", "Username "+username)
+                        Log.e("Register", "Equals? "+(password.equals(confirmPassword)))
+
+                        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
+                        val preHashedPassword = bytes.joinToString("") { "%02x".format(it) }
+                        Log.e("Register", "Hash "+ preHashedPassword)
+                        //148de9c5a7a44d19e56cd9ae1a554bf67847afb0c58f6e12fa29ac7ddfca9940
+                        viewModel.register(username,email, password)
+
+                        if(registerResult){
+                            navController.popBackStack()
+                        }else{
+                            username = ""
+                            email = ""
+                            password = ""
+                            confirmPassword = ""
+                        }
+                        navController.popBackStack()
+                    }
+
+
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onSurface
