@@ -1,5 +1,6 @@
 package com.example.armoryboxkotline
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.*
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -38,16 +40,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.example.armoryboxkotline.Conection.Controller.CardEdition
 import com.example.armoryboxkotline.Conection.Controller.CardRoot
 import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 
@@ -57,11 +62,13 @@ import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 fun DetailsScreen(navController: NavController, cardId: String){
     val cardsViewModel = viewModel<CardsViewModel>()
     val card by cardsViewModel.card.observeAsState(initial = null)
+    val editionsMap by cardsViewModel.editions.collectAsState()
+    var editions = editionsMap[cardId].orEmpty()
     val scrollState = rememberLazyListState()
-    val topBarHeight = 64.dp
 
     LaunchedEffect(cardId) {
         cardsViewModel.fetchCardById(cardId)
+        cardsViewModel.getEditions(cardId)
     }
     if(card == null){
         EmpryScreen("Problema al encontrar la carta")
@@ -95,10 +102,13 @@ fun DetailsScreen(navController: NavController, cardId: String){
                                 .background(Color.LightGray),
                             contentAlignment = Alignment.Center
                         ) {
-                            ExpandableCardArtView(
-                                resourceId = R.drawable.placeholder,
-                                isFullArt = false // Cambia a true para cartas full art
-                            )
+                            if(editions.isNotEmpty()){
+                                ExpandableCardArtView(
+                                    imageUrl = editions.get(0).imageUrl,
+                                    isFullArt = false // Cambia a true para cartas full art
+                                )
+                            }
+
                         }
 
                         // Solo mostramos este botón de regreso si la topbar no está visible
@@ -143,7 +153,6 @@ fun DetailsScreen(navController: NavController, cardId: String){
                                 Spacer(
                                     modifier = Modifier.height(2.dp)
                                 )
-                                thisCard.types
                                 fun generateSubtitle(list: List<String> ): String {
                                     var result = ""
                                     list.forEach{ item ->
@@ -201,12 +210,26 @@ fun DetailsScreen(navController: NavController, cardId: String){
                             }
 
                         }
+                        fun getSets(editions: List<CardEdition>): Map<String, List<CardEdition>> {
+                            return editions.groupBy { it.setId }
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        TitleBar("Edicion de prueba")
+                        if (editions.isNotEmpty()) {
+                            val sets: Map<String, List<CardEdition>> = getSets(editions)
+
+                            for ((setId, editionsInSet) in sets) {
+                                TitleBar(setId, editionsInSet.size)
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                for (edition in editionsInSet) {
+                                    VersionCard(edition)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        VersionCard()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Mucho contenido...".repeat(100))
+
+                       // Text("Mucho contenido...".repeat(100))
                     }
                 }
             }
@@ -347,29 +370,92 @@ fun CardText(text: String){
 }
 
 @Composable
-fun TitleBar(title: String){
+fun TitleBar(title: String, versions: Int){
     Surface (
         modifier = Modifier
             .fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceVariant
     ){
-        Text(
-            text = title,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Start,
-            lineHeight = 22.sp,
-            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp,start = 32.dp)
-        )
+        Row {
+            Box (
+                modifier = Modifier
+                    .weight(2.5f)
+                    .fillMaxSize()
+                    .wrapContentHeight(align = Alignment.Top),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Start,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp,start = 16.dp)
+                )
+            }
+            Box (
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .wrapContentHeight(align = Alignment.Top),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = "$versions versiones",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Start,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.padding(top = 8.dp,end = 8.dp)
+                )
+            }
+        }
     }
 }
 
+enum class Rarity(val code: String, val displayName: String) {
+    TOKEN("T", "Token"),
+    COMMON("C", "Common"),
+    RARE("R", "Rare"),
+    SUPER_RARE("S", "Super Rare"),
+    MAJESTIC("M", "Majestic"),
+    LEGENDARY("L", "Legendary"),
+    MARVEL("F", "Marvel"),
+    PROMO("P", "Promo"),
+
+    UNKNOWN("UNKNOWN", "Desconocido");
+
+    companion object {
+        fun fromCode(code: String): Rarity {
+            return when {
+                code.contains("MV") || code.contains("F") -> MARVEL
+                else -> values().firstOrNull { it.code == code } ?: UNKNOWN
+            }
+        }
+    }
+}
+
+
 @Composable
-fun VersionCard() {
-    var rarity = "Majestic"
+fun VersionCard(cardEdition: CardEdition) {
+    val cardsViewModel = viewModel<CardsViewModel>()
+    val card by cardsViewModel.card.observeAsState(initial = null)
+
+    var aux_rarity = Rarity.fromCode(cardEdition.rarity)
+    var rarity = aux_rarity.displayName
+
+    LaunchedEffect(cardEdition.cardId) {
+        cardsViewModel.fetchCardById(cardEdition.cardUniqueId)
+
+        var aux_rarity = Rarity.fromCode(cardEdition.rarity)
+        rarity = aux_rarity.displayName
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surface)
     ) {
@@ -378,7 +464,6 @@ fun VersionCard() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -396,11 +481,50 @@ fun VersionCard() {
                         .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Arte",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    var imageUrl = cardEdition.imageUrl
+
+                    if(card != null && imageUrl != null){
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(cardEdition.imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Card image: ${card!!.name}",
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(30.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            error = {
+                                // Log error
+                                Log.e("ImageLoading", "Failed to load image: $imageUrl")
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.magnify), // Use an appropriate error icon
+                                        contentDescription = "Error loading image",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    }else{
+                        Text(
+                            text = "Arte",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -417,7 +541,7 @@ fun VersionCard() {
                         .padding(start = 16.dp, top = 12.dp)
                 ) {
                     Text(
-                        text = "Nombre de la carta (Color)",
+                        text = card!!.name,
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -433,7 +557,8 @@ fun VersionCard() {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    .padding(end = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 IconButton(

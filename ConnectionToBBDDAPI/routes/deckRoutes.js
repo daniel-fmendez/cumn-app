@@ -7,5 +7,6 @@ router.post('/add_deck', deckController.createDeck);
 router.get('/decks/:user_id', deckController.getUserDecks);
 router.post('/update_deck_card', deckController.updateDeckCard);
 router.get('/deck_cards/:deck_id', deckController.getDeckCards);
+router.post('/delete_deck', deckController.deleteDeck);
 
 module.exports = router;

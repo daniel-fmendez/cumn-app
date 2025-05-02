@@ -15,6 +15,27 @@ const createDeck = async (req, res) => {
         res.status(500).send("Error interno");
     }
 };
+//Delete deck 
+const deleteDeck = async (req, res) => {
+    const { id } = req.body;
+
+    try {
+        const result = await client.query(
+            'DELETE FROM public.decks WHERE id = $1 RETURNING *',
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "Deck no encontrado" });
+        }
+
+        res.status(200).json({ message: "Deck eliminado", deck: result.rows[0] });
+    } catch (err) {
+        console.error("Error en deleteDeck:", err);
+        res.status(500).send("Error interno");
+    }
+};
+
 
 // Obtener mazos de un usuario
 const getUserDecks = async (req, res) => {
@@ -46,10 +67,10 @@ const updateDeckCard = async (req, res) => {
                 RETURNING *`,
                 [deck_id, card_id, quantity]
             );
-            res.status(200).json(result.rows[0]);
+            res.status(201).json(result.rows[0]);
         } else {
             await client.query(
-                'DELETE FROM public.deck_cards WHERE deck_id = $1 AND card_id = $2',
+                'DELETE FROM public.deck_cards WHERE deck_id = $1 AND card_id = $2 RETURNING *',
                 [deck_id, card_id]
             );
             res.status(200).send("Carta eliminada del mazo");
@@ -80,5 +101,6 @@ module.exports = {
     createDeck,
     getUserDecks,
     updateDeckCard,
-    getDeckCards
+    getDeckCards,
+    deleteDeck
 };

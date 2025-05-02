@@ -16,6 +16,8 @@ COPY . .
 # Copiamos el certificado d
 COPY BaltimoreCyberTrustRoot.crt.pem ./
 
+RUN chmod 644 BaltimoreCyberTrustRoot.crt.pem
+
 # Exponemos el puerto que usamos en app.js
 EXPOSE 3000
 

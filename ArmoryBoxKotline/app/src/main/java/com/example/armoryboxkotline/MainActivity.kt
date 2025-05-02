@@ -36,8 +36,10 @@ import com.example.armoryboxkotline.UserManagement.ProfileScreen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         setContent {
             ArmoryBoxKotlineTheme {
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
             }
         }
+
     }
 }
 
@@ -130,15 +133,13 @@ fun MainScreen() {
             composable(route = Screen.AccessScreen.rout) {
                 AccessScreen(navController)
             }
-
             composable(
-                route = Screen.DeckDetails.rout,
-                arguments = listOf(
-                    navArgument("deckId") { type = NavType.StringType }
-                )
+                route = Screen.DeckDetails.rout
             ) { backStackEntry ->
-                val deckId = backStackEntry.arguments?.getString("deckId")
                 DeckDetails(navController,sharedDeckViewModel)
+            }
+            composable(route = Screen.CreateDeck.rout) {
+                CreateDeck(navController)
             }
         }
 

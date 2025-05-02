@@ -3,6 +3,7 @@ package com.example.armoryboxkotline
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -64,6 +65,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +76,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -92,6 +95,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.graphics.drawable.toBitmap
 import androidx.navigation.NavController
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -100,7 +106,9 @@ import kotlinx.coroutines.CoroutineScope
  * @param isFullArt indica si la carta es full art, lo que cambiará la región de recorte
  * @return un nuevo bitmap que contiene solo el área del arte
  */
-fun extractCardArtwork(originalBitmap: Bitmap, isFullArt: Boolean = false): Bitmap {
+
+
+/*fun extractCardArtwork(originalBitmap: Bitmap, isFullArt: Boolean = false): Bitmap {
     val width = originalBitmap.width
     val height = originalBitmap.height
 
@@ -141,7 +149,7 @@ fun extractCardArtwork(originalBitmap: Bitmap, isFullArt: Boolean = false): Bitm
     )
 
     return resultBitmap
-}
+}*/
 
 /**
  * Componente para mostrar una carta en modo normal y permitir ampliarla a pantalla completa
@@ -259,7 +267,7 @@ fun FullScreenCardDialog(resourceId: Int, onDismiss: () -> Unit) {
  * Versión que extraerá solo el arte al hacer clic
  */
 @Composable
-fun ExpandableCardArtView(resourceId: Int, isFullArt: Boolean = false) {
+fun ExpandableCardArtView(imageUrl: String, isFullArt: Boolean = false) {
     var showFullScreen by remember { mutableStateOf(false) }
     var showOnlyArt by remember { mutableStateOf(false) }
 
@@ -268,11 +276,34 @@ fun ExpandableCardArtView(resourceId: Int, isFullArt: Boolean = false) {
         modifier = Modifier
             .clickable { showFullScreen = true }
     ) {
-        // Mostrar la carta completa inicialmente
-        Image(
-            painter = painterResource(id = resourceId),
+        // Cargar la imagen desde URL con Coil
+        SubcomposeAsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageUrl)
+                .crossfade(true)
+                .build(),
             contentDescription = "Card Image",
             contentScale = ContentScale.FillWidth,
+            loading = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            },
+            error = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -280,7 +311,7 @@ fun ExpandableCardArtView(resourceId: Int, isFullArt: Boolean = false) {
     // Pantalla completa cuando se hace clic
     if (showFullScreen) {
         FullScreenCardWithOptionsDialog(
-            resourceId = resourceId,
+            imageUrl = imageUrl,
             isFullArt = isFullArt,
             onDismiss = { showFullScreen = false },
             initialShowOnlyArt = showOnlyArt,
@@ -294,7 +325,7 @@ fun ExpandableCardArtView(resourceId: Int, isFullArt: Boolean = false) {
  */
 @Composable
 fun FullScreenCardWithOptionsDialog(
-    resourceId: Int,
+    imageUrl: String,
     isFullArt: Boolean,
     onDismiss: () -> Unit,
     initialShowOnlyArt: Boolean = false,
@@ -304,6 +335,31 @@ fun FullScreenCardWithOptionsDialog(
     var offsetX by remember { mutableStateOf(0f) }
     var offsetY by remember { mutableStateOf(0f) }
     var showOnlyArt by remember { mutableStateOf(initialShowOnlyArt) }
+    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var artworkBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    val context = LocalContext.current
+
+    // Efecto para cargar la imagen cuando cambia la URL
+    LaunchedEffect(imageUrl) {
+        // Usar Coil para cargar la imagen
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .target { drawable ->
+                // Convertir el drawable a bitmap
+                val bitmap = (drawable as? BitmapDrawable)?.bitmap
+                if (bitmap != null) {
+                    imageBitmap = bitmap.asImageBitmap()
+                    if (isFullArt) {
+                        // Para cartas de arte completo, extraer según las dimensiones correspondientes
+                        artworkBitmap = extractCardArtwork(bitmap, true).asImageBitmap()
+                    } else {
+                        // Para cartas normales
+                        artworkBitmap = extractCardArtwork(bitmap, false).asImageBitmap()
+                    }
+                }
+            }
+            .build()
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -338,15 +394,10 @@ fun FullScreenCardWithOptionsDialog(
                     }
                 }
         ) {
-            val context = LocalContext.current
-
             // Mostrar carta completa o solo el arte según la selección
-            if (showOnlyArt) {
-                val originalBitmap = context.resources.getDrawable(resourceId, null).toBitmap()
-                val artworkBitmap = extractCardArtwork(originalBitmap, isFullArt)
-
+            if (showOnlyArt && artworkBitmap != null) {
                 Image(
-                    bitmap = artworkBitmap.asImageBitmap(),
+                    bitmap = artworkBitmap!!,
                     contentDescription = "Card Artwork",
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
@@ -359,10 +410,30 @@ fun FullScreenCardWithOptionsDialog(
                         )
                 )
             } else {
-                Image(
-                    painter = painterResource(id = resourceId),
+                // Mostrar la imagen completa cargada desde URL
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Full Card",
                     contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    },
+                    error = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Error loading image", color = Color.Red)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(
@@ -409,5 +480,37 @@ fun FullScreenCardWithOptionsDialog(
                 )
             }
         }
+    }
+}
+
+// Función auxiliar para extraer el artwork de la carta
+fun extractCardArtwork(bitmap: Bitmap, isFullArt: Boolean): Bitmap {
+    val width = bitmap.width
+    val height = bitmap.height
+
+    return if (isFullArt) {
+        // Para cartas de arte completo, recortar menos área
+        val artTop = (height * 0.1).toInt()
+        val artBottom = (height * 0.8).toInt()
+
+        Bitmap.createBitmap(
+            bitmap,
+            0,
+            artTop,
+            width,
+            artBottom - artTop
+        )
+    } else {
+        // Para cartas normales, recortar el área típica del arte
+        val artTop = (height * 0.15).toInt()
+        val artBottom = (height * 0.55).toInt()
+
+        Bitmap.createBitmap(
+            bitmap,
+            0,
+            artTop,
+            width,
+            artBottom - artTop
+        )
     }
 }

@@ -1,28 +1,30 @@
-
 package com.example.armoryboxkotline
 
 import android.util.Log
+import android.widget.Space
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,19 +48,17 @@ import com.example.armoryboxkotline.Conection.Controller.CardRoot
 import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.DeckCard
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 import java.util.UUID
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckViewModel){
-    val deck = sharedDeckViewModel.selectedDeck
+fun CreateDeck(navController: NavController){
+
     val cardsViewModel = viewModel<CardsViewModel>()
     val cards by cardsViewModel.cards.collectAsState(initial = emptyList())
     val cardImages by cardsViewModel.cardImages.collectAsState()
 
+    var heroId by remember { mutableStateOf("") }
     var deckName by remember { mutableStateOf("") }
     var selectedDeckType by remember { mutableStateOf(DeckType.Blitz) }
 
@@ -73,19 +73,11 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
     var searchTriggered by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    //Inicializa valores
-    LaunchedEffect(deck) {
-        if (deck != null) {
-            deckName = deck.name
-            selectedDeckType = DeckType.fromString(deck.type)
-            deckCards = emptyList()
-        }
-    }
 
 
     fun updateCardQuantity(cardToUpdate: CardRoot, newQuantity: Int) {
         val deckCard = DeckCard(
-            deckId = deck?.id ?: 0,
+            deckId = 0,
             cardId = cardToUpdate.uniqueId,
             quantity = newQuantity
         )
@@ -111,16 +103,12 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
     fun canAddMoreCards(): Boolean {
         return totalCards < maxCards
     }
-
     val filteredItems = remember(searchTriggered, cards) {
         if (searchTriggered) cards else emptyList()
     }
-
     Column(modifier = Modifier.fillMaxSize()) {
         // Top bar siempre fijo en la parte superior
-        deck?.let {
-            FakeTopBar(navController, "Editar Mazo")
-        } ?: FakeTopBar(navController, "Crear Mazo")
+        FakeTopBar(navController, "Crear Mazo")
 
         // Contenido principal con scroll
         Box(
@@ -173,8 +161,8 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                         // Placeholder que se muestra solo cuando el campo está vacío
                                         if (deckName.isEmpty()) {
                                             Text(
-                                                text = "...",
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                text = "Nombre",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                                 style = MaterialTheme.typography.titleSmall
                                             )
                                         }
@@ -183,6 +171,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                     }
                                 }
                             }
+                            Spacer(Modifier.height(8.dp))
                             Text(
                                 text = "Formato",
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -219,9 +208,15 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 text = "Héroe",
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                //modifier = Modifier.padding(horizontal = 8.dp)
                             )
-                            HeroCard()
+                            //Carta del heroe
+                            if(heroId.isEmpty()){
+                                SelectHeroCard()
+                            }else{
+                                HeroCard()
+                            }
                         }
                     }
                 }
@@ -308,6 +303,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             IconButton(
                                 onClick = {
                                     if (searchQuery.isNotBlank()) {
+                                        cardsViewModel.searchCard(searchQuery)
                                         searchTriggered = true
                                         focusManager.clearFocus()
                                     }
@@ -338,6 +334,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 keyboardActions = KeyboardActions(
                                     onSearch = {
                                         if (searchQuery.isNotBlank()) {
+                                            cardsViewModel.searchCard(searchQuery)
                                             searchTriggered = true
                                             focusManager.clearFocus()
                                         }
@@ -392,8 +389,15 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 .padding(horizontal = 4.dp),
                             horizontalAlignment = Alignment.Start
                         ) {
+                            fun getQuantity(cards: List<DeckCard>): Int {
+                                var quantity = 0
+                                for (card in cards) {
+                                    quantity += card.quantity
+                                }
+                                return quantity
+                            }
                             Text(
-                                text = "Cartas en el mazo (${deckCards.size})",
+                                text = "Cartas en el mazo (${getQuantity(deckCards)})",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 fontWeight = FontWeight.Bold,
@@ -470,7 +474,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 
                                     // Crear un objeto DeckCard temporal para mostrar
                                     val tempDeckCard = DeckCard(
-                                        deckId = deck?.id ?: 0,
+                                        deckId =  0,
                                         cardId = card.uniqueId,
                                         quantity = itemQuantityInDeck
                                     )
@@ -482,6 +486,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                             updateCardQuantity(c, newQuantity)
                                         }
                                     )
+                                    //CustomCard(navController,card,"")
                                 }
                             }
                         }
@@ -502,7 +507,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
             ) {
                 // Botón Cancelar
                 Button(
-                    onClick = { navController.popBackStack() },
+                    onClick = { /* Acción cancelar */ },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = MaterialTheme.colorScheme.onSurface
@@ -516,19 +521,6 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                 // Botón Guardar
                 Button(
                     onClick = {
-                        // Crear o actualizar el mazo
-                        if (deck != null) {
-                            // Actualizar mazo existente
-                            val updatedDeck = deck.copy(name = deckName, type = selectedDeckType.name)
-                            sharedDeckViewModel.updateDeck(updatedDeck)
-
-                            // También actualizar las cartas del mazo en la base de datos
-                            // (Este código dependerá de cómo manejes la persistencia)
-                        } else {
-                            // Crear nuevo mazo
-                            // (Implementación dependiendo de tu modelo de datos)
-                        }
-
                         navController.popBackStack()
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -546,433 +538,29 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 }
 
 @Composable
-fun DeckTypeSelector(
-    selectedType: DeckType,
-    onTypeSelected: (DeckType) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        DeckType.values().forEach { deckType ->
-            DeckTypeButton(
-                type = deckType,
-                isSelected = deckType == selectedType,
-                onClick = { onTypeSelected(deckType) }
-            )
-        }
-    }
-}
-
-@Composable
-fun DeckTypeButton(
-    type: DeckType,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val backgroundColor = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val textColor = if (isSelected) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
-            contentColor = textColor
-        ),
-        shape = RoundedCornerShape(10.dp),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = type.name,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-    }
-}
-@Composable
-fun HeroCard() {
+fun SelectHeroCard() {
     Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+        IconButton(
+            onClick = { /* No hace nada por ahora */ },
+            modifier = Modifier
+                .padding(8.dp)
+                .size(48.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                    shape = CircleShape
+                )
         ) {
-
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .wrapContentHeight(align = Alignment.Top),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
-                        .width(50.dp)
-                        .height(65.dp)
-                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Arte",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(4f)
-                    .fillMaxHeight()
-                    .padding(vertical = 12.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(start = 16.dp),
-                    verticalArrangement = Arrangement.Top // Cambiado a Top
-                ) {
-                    Text(
-                        text = "Nombre del heroe",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Clase · Tipo",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(
-                    onClick = { /* No hace nada por ahora */ },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Eliminar",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Buscar",
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
     }
-}
-
-@Composable
-fun CardInDeck(
-    deckCard: DeckCard,
-    maxAllowed: Int = Int.MAX_VALUE,
-    onQuantityChanged: (CardRoot, Int) -> Unit
-) {
-    val cardsViewModel = viewModel<CardsViewModel>()
-
-    var card by remember { mutableStateOf<CardRoot?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var hasError by remember { mutableStateOf(false) }
-
-    LaunchedEffect(deckCard.cardId) {
-        isLoading = true
-        hasError = false
-        val result = cardsViewModel.getCardByIdDirect(deckCard.cardId)
-        if (result != null) {
-            card = result
-        } else {
-            hasError = true
-        }
-        isLoading = false
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surface),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        when {
-            isLoading -> {
-                // Estado de carga
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            hasError -> {
-                // Estado de error
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Error al cargar la carta",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            card == null -> {
-                // Estado cuando la carta no se encontró
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Carta no encontrada",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            else -> {
-                // Mostrar información de la carta
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    // Imagen de la carta
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .wrapContentHeight(align = Alignment.Top),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
-                                .width(50.dp)
-                                .height(65.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(MaterialTheme.colorScheme.surface),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Arte",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    // Información de la carta
-                    Box(
-                        modifier = Modifier
-                            .weight(4f)
-                            .fillMaxHeight()
-                            .padding(vertical = 12.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(start = 16.dp),
-                            verticalArrangement = Arrangement.Top
-                        ) {
-                            Text(
-                                text = card?.name ?: "Cargando...",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = generateSubtitle(card?.types ?: emptyList()),
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-
-                    // Controles de cantidad
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .weight(2f)
-                            .fillMaxHeight()
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                    ) {
-                        if (deckCard.quantity == 0) {
-                            // Botón para añadir la primera carta
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        if (maxAllowed > 0 && card != null) {
-                                            onQuantityChanged(card!!, 1)
-                                        }
-                                    },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Agregar",
-                                        tint = if (maxAllowed > 0 && card != null)
-                                            MaterialTheme.colorScheme.primary
-                                        else
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                    )
-                                }
-                            }
-                        } else {
-                            // Controles para cartas ya añadidas (mostrar cantidad y botones +/-)
-                            Row {
-                                // Botón de restar
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(vertical = 12.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                if (card != null) {
-                                                    onQuantityChanged(card!!, deckCard.quantity - 1)
-                                                }
-                                            },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.minus),
-                                                contentDescription = "Quitar",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Mostrar cantidad
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(horizontal = 4.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
-                                                shape = CircleShape
-                                            )
-                                            .defaultMinSize(minWidth = 32.dp)
-                                            .wrapContentSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = deckCard.quantity.toString(),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.titleLarge
-                                        )
-                                    }
-                                }
-
-                                // Botón de añadir
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                if (deckCard.quantity < maxAllowed && card != null) {
-                                                    onQuantityChanged(card!!, deckCard.quantity + 1)
-                                                }
-                                            },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Add,
-                                                contentDescription = "Agregar",
-                                                tint = if (deckCard.quantity < maxAllowed && card != null)
-                                                    MaterialTheme.colorScheme.primary
-                                                else
-                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Función auxiliar para generar el subtítulo con los tipos de carta
-fun generateSubtitle(list: List<String>): String {
-    return list.joinToString(separator = " · ")
 }

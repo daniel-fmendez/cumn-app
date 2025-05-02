@@ -92,6 +92,13 @@ class CardsViewModel : ViewModel() {
             }
         }
     }
+    suspend fun getCardByIdDirect(cardId: String): CardRoot? {
+        return try {
+            getCardById(cardId) // tu función de red
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     // Función para obtener ediciones de una carta específica
     fun getCardEditions(cardId: String): List<CardEdition> {

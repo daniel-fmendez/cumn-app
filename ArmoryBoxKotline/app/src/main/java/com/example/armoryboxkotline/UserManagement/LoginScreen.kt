@@ -42,12 +42,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.armoryboxkotline.FakeTopBar
 import com.example.armoryboxkotline.R
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
+import kotlinx.coroutines.launch
 import java.security.MessageDigest
 
 @Composable
 fun AccessScreen(navController: NavController){
     var selectedIndex by remember { mutableStateOf(0) }
     val options = listOf("Login", "Register")
+
+
 
     Box(
         Modifier
@@ -143,6 +146,16 @@ fun LoginTab(navController: NavController, viewModel: AccessViewModel = viewMode
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val loginResult by viewModel.loginResult.observeAsState(initial = false)
+    var isLoggingIn by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(loginResult) {
+        if (loginResult && isLoggingIn) {
+            isLoggingIn = false
+            navController.popBackStack()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -241,27 +254,12 @@ fun LoginTab(navController: NavController, viewModel: AccessViewModel = viewMode
 
             Button(
                 onClick = {
-
-                    if(!email.isEmpty() && !password.isEmpty()){
-                        viewModel.login(email, password)
-
-                        Log.e("Login", "Email "+email)
-                        Log.e("Login", "Password "+password)
-
-                        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
-                        val preHashedPassword = bytes.joinToString("") { "%02x".format(it) }
-
-                        Log.e("Login", "Hash "+preHashedPassword)
-                        if(loginResult){
-                            navController.popBackStack()
-                        }else{
-                            email = ""
-                            password = ""
+                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                        coroutineScope.launch {
+                            isLoggingIn = true
+                            viewModel.login(email, password)
                         }
-                        navController.popBackStack()
                     }
-
-
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -291,7 +289,14 @@ fun RegisterTab(navController: NavController, viewModel: AccessViewModel = viewM
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
+    var isRegistering by remember { mutableStateOf(false) }
     val registerResult by viewModel.registerResult.observeAsState(initial = false)
+    LaunchedEffect(registerResult) {
+        if (registerResult && isRegistering) {
+            isRegistering = false
+            navController.popBackStack()
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -480,34 +485,14 @@ fun RegisterTab(navController: NavController, viewModel: AccessViewModel = viewM
 
             Button(
                 onClick = {
-                    var valid = !email.isEmpty() && !password.isEmpty()
-                            && !username.isEmpty() && !confirmPassword.isEmpty() &&(password.equals(confirmPassword))
+                    val valid = email.isNotEmpty() && password.isNotEmpty() &&
+                            username.isNotEmpty() && confirmPassword.isNotEmpty() &&
+                            password == confirmPassword
+
                     if(valid) {
-                        Log.e("Register", "Email "+email)
-                        Log.e("Register", "Password "+password)
-
-                        Log.e("Register", "Confirm "+confirmPassword)
-                        Log.e("Register", "Username "+username)
-                        Log.e("Register", "Equals? "+(password.equals(confirmPassword)))
-
-                        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
-                        val preHashedPassword = bytes.joinToString("") { "%02x".format(it) }
-                        Log.e("Register", "Hash "+ preHashedPassword)
-                        //148de9c5a7a44d19e56cd9ae1a554bf67847afb0c58f6e12fa29ac7ddfca9940
-                        viewModel.register(username,email, password)
-
-                        if(registerResult){
-                            navController.popBackStack()
-                        }else{
-                            username = ""
-                            email = ""
-                            password = ""
-                            confirmPassword = ""
-                        }
-                        navController.popBackStack()
+                        isRegistering = true
+                        viewModel.register(username, email, password)
                     }
-
-
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,

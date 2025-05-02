@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -29,11 +31,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
+import com.example.armoryboxkotline.Conection.Controller.Deck
+import com.example.armoryboxkotline.Conection.Controller.DeckCard
+import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
+import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.UserManagement.AccessScreen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
 import kotlinx.parcelize.Parcelize
 import java.util.UUID
 
+/*
 @Parcelize
 data class Card(
     val id: String,
@@ -45,19 +53,26 @@ data class Card(
     fun contains(searchQuery: String, ignoreCase: Boolean): Boolean {
         return name.contains(searchQuery,ignoreCase) ;
     }
-}
+}*/
 
-@Parcelize
+/*@Parcelize
 data class Deck(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val type: DeckType,
     val cards: List<Card>
-) : Parcelable
+) : Parcelable*/
 
 enum class DeckType (val cardLimit: Int){
     Blitz (40),
-    Classic (80),
+    Classic (80);
+
+    companion object {
+        fun fromString(name: String): DeckType {
+            return values().firstOrNull { it.name.equals(name, ignoreCase = true) }
+                ?: Classic
+        }
+    }
 }
 
 class SharedDeckViewModel : ViewModel() {
@@ -89,6 +104,13 @@ class SharedDeckViewModel : ViewModel() {
 
 @Composable
 fun DecksScreen(navController: NavController, sharedDeckViewModel: SharedDeckViewModel){
+    val decksViewModel = viewModel<DecksViewModel>()
+    val decks by decksViewModel.decks.collectAsState(initial = emptyList())
+
+    LaunchedEffect(decksViewModel) {
+        decksViewModel.userDecks(SessionManager.userId!!)
+    }
+    /*
     val decks = listOf(
         Deck(
             name = "Fai Blitz",
@@ -115,13 +137,13 @@ fun DecksScreen(navController: NavController, sharedDeckViewModel: SharedDeckVie
                 Card(UUID.randomUUID().toString(), "Frosting", "Wizard Action", 1, 3)
             )
         )
-    )
+    )*/
 
     Box (modifier = Modifier
         .fillMaxSize(),
     ){
         Column {
-            DeckTopbar()
+            DeckTopbar(navController)
             Column (
                 modifier = Modifier
                     .fillMaxSize()
@@ -130,7 +152,7 @@ fun DecksScreen(navController: NavController, sharedDeckViewModel: SharedDeckVie
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 decks.forEach{ item ->
-                    DeckCard(navController,sharedDeckViewModel,item)
+                    DeckCard(navController, sharedDeckViewModel,item)
                     Spacer(Modifier.height(16.dp))
                 }
             }
@@ -139,7 +161,7 @@ fun DecksScreen(navController: NavController, sharedDeckViewModel: SharedDeckVie
 }
 
 @Composable
-fun DeckTopbar(){
+fun DeckTopbar(navController: NavController){
     Box (
         modifier = Modifier
             .fillMaxWidth()
@@ -147,7 +169,6 @@ fun DeckTopbar(){
             .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.CenterStart
     ){
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -177,7 +198,9 @@ fun DeckTopbar(){
                 //.background(Color.Red)
             ) {
                 Button(
-                    onClick = { },
+                    onClick = {
+                        navController.navigate(Screen.CreateDeck.rout)
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onSurface
@@ -196,8 +219,15 @@ fun DeckTopbar(){
 }
 
 @Composable
-fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewModel,deck: Deck){
-    fun getQuantity(cards: List<Card>): Int {
+fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewModel, deck: Deck){
+    val decksViewModel = viewModel<DecksViewModel>()
+    val deckCards by decksViewModel.deckCards.collectAsState(initial = emptyList())
+
+    LaunchedEffect(decksViewModel) {
+        decksViewModel.loadDeckCards(deck.id)
+    }
+
+    fun getQuantity(cards: List<DeckCard>): Int {
         var quantity = 0
         for (card in cards) {
             quantity += card.quantity
@@ -260,7 +290,7 @@ fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewMo
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = deck.type.toString(),
+                            text = deck.type,
                             color = MaterialTheme.colorScheme.primary,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -272,8 +302,9 @@ fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewMo
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        val cards = getQuantity(deck.cards)
-                        val maxCards = deck.type.cardLimit
+                        val deckType = DeckType.fromString(deck.type)
+                        val cards = getQuantity(deckCards)
+                        val maxCards = deckType.cardLimit
                         val progress = cards.toFloat() / maxCards.toFloat()
 
                         Text(

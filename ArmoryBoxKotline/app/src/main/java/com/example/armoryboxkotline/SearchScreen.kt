@@ -1,6 +1,7 @@
 package com.example.armoryboxkotline
 
 
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 
@@ -52,9 +54,6 @@ fun SearchScreen(navController: NavController){
         SearchBar(navController, cardsViewModel, cards, cardImages)
     }
 }
-data class CardItem (
-    val name: String,
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -221,22 +220,38 @@ fun CustomCard(navController: NavController, card: CardRoot, imageUrl: String) {
                 if (imageUrl != null && imageUrl.isNotEmpty()) {
                     // Cargar la imagen con placeholder para errores y carga
                     SubcomposeAsyncImage(
-                        model = imageUrl,
-                        contentDescription = "Arte de la carta",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize(),
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Card image: ${card.name}",
                         loading = {
-                            Box(Modifier.fillMaxSize()) {
-                                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(30.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                         },
                         error = {
-                            Text(
-                                text = "Arte no disponible",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                            // Log error
+                            Log.e("ImageLoading", "Failed to load image: $imageUrl")
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.magnify), // Use an appropriate error icon
+                                    contentDescription = "Error loading image",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
                     )
                 } else {
                     // Si no hay URL de imagen
