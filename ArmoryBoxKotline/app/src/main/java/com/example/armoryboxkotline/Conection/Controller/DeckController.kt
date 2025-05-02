@@ -1,11 +1,13 @@
 package com.example.armoryboxkotline.Conection.Controller
 
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.armoryboxkotline.Conection.Config
 import com.example.armoryboxkotline.Conection.HttpClientSingleton
-import com.example.armoryboxkotline.Conection.SessionManager
+import com.example.armoryboxkotline.Decks.DeckCardPair
 import io.ktor.client.call.body
 import io.ktor.client.request.*
 import io.ktor.http.ContentType
@@ -24,6 +26,9 @@ class DecksViewModel : ViewModel() {
 
     private val _deckCards = MutableStateFlow<List<DeckCard>>(emptyList())
     val deckCards = _deckCards.asStateFlow()
+
+    private val _deck_result = MutableLiveData<Deck>()
+    val deckResult : LiveData<Deck> get() = _deck_result
 
     fun userDecks(userId: Int) {
         viewModelScope.launch {
@@ -58,6 +63,23 @@ class DecksViewModel : ViewModel() {
                 if (newDeck != null) {
                     // Añade el nuevo mazo a la lista existente
                     _decks.value = _decks.value + newDeck
+                }
+            } catch (e: Exception) {
+                Log.e("DecksViewModel", "Error al crear mazo", e)
+            }
+        }
+    }
+
+    fun createDeckWithCards(name: String, userId: Int, heroId: String, cards :List<DeckCardPair>) {
+        viewModelScope.launch {
+            try {
+                val newDeck = addDeck(name, userId, heroId)
+                if (newDeck != null) {
+                    // Añade el nuevo mazo a la lista existente
+                    _decks.value = _decks.value + newDeck
+                    for (card in cards){
+                        updateCardInDeck(newDeck.id,card.deckCard.cardId,card.deckCard.quantity)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("DecksViewModel", "Error al crear mazo", e)
@@ -150,17 +172,19 @@ suspend fun removeDeckById(id: Int): Deck? {
         return  null
     }
 }
+@Serializable
+data class AddDeckRequest(
+    val name: String,
+    @SerialName("user_id") val userId: Int,
+    @SerialName("hero_id") val heroId: String
+)
 
 suspend fun addDeck(name: String, userId: Int, heroId: String): Deck? {
+    val requestBody = AddDeckRequest(name, userId, heroId)
+
     val response = HttpClientSingleton.client.post("${Config.BASE_URL}/add_deck/") {
         contentType(ContentType.Application.Json)
-        setBody(
-            mapOf(
-                "name" to name,
-                "user_id" to userId,
-                "hero_id" to heroId
-            )
-        )
+        setBody(requestBody)
     }
 
     if (response.status.value == 201) {
@@ -180,16 +204,20 @@ data class DeckCard(
     val cardId: String,
     var quantity: Int,
 )
+@Serializable
+data class UpdateCardRequest(
+    @SerialName("deck_id") val deckId: Int,
+    @SerialName("card_id") val cardId: String,
+    @SerialName("quantity") val quantity: Int
+)
 
 suspend fun updateDeckCard(deckId: Int, cardId: String, quantity: Int): DeckCard? {
+    val requestBody = UpdateCardRequest(deckId, cardId, quantity)
+
     val response = HttpClientSingleton.client.post("${Config.BASE_URL}/update_deck_card/") {
         contentType(ContentType.Application.Json)
         setBody(
-            mapOf(
-                "deck_id" to deckId,
-                "card_id" to cardId,
-                "quantity" to quantity
-            )
+            requestBody
         )
     }
 

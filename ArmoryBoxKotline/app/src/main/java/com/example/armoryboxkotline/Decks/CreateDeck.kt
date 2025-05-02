@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +39,8 @@ import androidx.navigation.NavController
 import com.example.armoryboxkotline.Conection.Controller.CardRoot
 import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.DeckCard
+import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
+import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.FakeTopBar
 import com.example.armoryboxkotline.R
 import com.example.armoryboxkotline.Screen
@@ -45,6 +48,7 @@ import com.example.armoryboxkotline.Screen
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CreateDeck(navController: NavController){
+    val decksViewModel = viewModel<DecksViewModel>()
 
     val cardsViewModel = viewModel<CardsViewModel>()
     val cards by cardsViewModel.cards.collectAsState(initial = emptyList())
@@ -557,10 +561,14 @@ fun CreateDeck(navController: NavController){
                     // Botón Guardar
                     Button(
                         onClick = {
-                            /*if(){
+                            if(deckName.isNotEmpty() && heroId.isNotEmpty()){
+                                decksViewModel.createDeckWithCards(deckName, SessionManager.userId!!,heroId, deckCards)
 
-                            }*/
-                            navController.popBackStack()
+                                navController.popBackStack()
+                            }else {
+                                Log.d("DeckCreate", "No se creo")
+                            }
+
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
