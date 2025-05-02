@@ -28,6 +28,9 @@ class CardsViewModel : ViewModel() {
     private val _cards = MutableStateFlow<List<CardRoot>>(emptyList())
     val cards = _cards.asStateFlow()
 
+    private val _heroes = MutableStateFlow<List<CardRoot>>(emptyList())
+    val heroes = _heroes.asStateFlow()
+
     // Para almacenar las URLs de las imágenes asociadas a cada carta
     private val _cardImages = MutableStateFlow<Map<String, String?>>(emptyMap())
     val cardImages = _cardImages.asStateFlow()
@@ -65,7 +68,17 @@ class CardsViewModel : ViewModel() {
             }
         }
     }
+    fun fetchHeroes(){
+        viewModelScope.launch {
+            try {
+                val heroList = getHeroes()
+                _heroes.value = heroList
+            }catch (e: Exception) {
+                _heroes.value = emptyList()
+            }
 
+        }
+    }
     fun searchCard(name: String) {
         viewModelScope.launch {
             try {
@@ -110,6 +123,67 @@ class CardsViewModel : ViewModel() {
         return _cardImages.value[cardId]
     }
 }
+
+class HeroesViewModel : ViewModel() {
+
+    private val _heroes = MutableStateFlow<List<CardRoot>>(emptyList())
+    val heroes = _heroes.asStateFlow()
+
+    private val _cardImages = MutableStateFlow<Map<String, String?>>(emptyMap())
+    val cardImages = _cardImages.asStateFlow()
+
+    private val _hero = MutableLiveData<CardRoot?>()
+    val hero: LiveData<CardRoot?> get() = _hero
+
+    fun fetchHeroes(){
+        viewModelScope.launch {
+            try {
+                val heroList = getHeroes()
+                _heroes.value = heroList
+
+                heroList.forEach { card ->
+                    getEditions(card.uniqueId)
+                }
+            }catch (e: Exception) {
+                _heroes.value = emptyList()
+            }
+        }
+    }
+
+    fun getEditions(id: String) {
+        viewModelScope.launch {
+            try {
+                val editionsList = searchEditions(id)
+
+                // Buscamos la primera imagen no vacía
+                val firstImageUrl = editionsList
+                    .firstOrNull { it.imageUrl.isNotEmpty() }
+                    ?.imageUrl ?: "" // Devolverá cadena vacía si no hay imagen
+
+                // Actualizamos el mapa de imágenes
+                _cardImages.value = _cardImages.value.toMutableMap().apply {
+                    put(id, firstImageUrl)
+                }
+            } catch (e: Exception) {
+                _cardImages.value = _cardImages.value.toMutableMap().apply {
+                    put(id, null)
+                }
+            }
+        }
+    }
+    fun fetchHeroById(heroId: String) {
+        viewModelScope.launch {
+            try {
+                // Llamamos a la función para obtener la carta
+                val fetchedCard = getCardById(heroId)
+                _hero.value = fetchedCard
+            } catch (e: Exception) {
+                _hero.value = null
+            }
+        }
+    }
+}
+
 @Serializable
 data class CardEdition(
     @SerialName("unique_id")
@@ -252,7 +326,18 @@ data class CardRoot(
     @SerialName("ll_restricted_start")
     val llRestrictedStart: String?,
 )
+suspend fun getHeroes(): List<CardRoot> {
+    val response = HttpClientSingleton.client.get("${Config.BASE_URL}/heroes") {
+    }
 
+    if (response.status.value == 200) {
+        val cards = response.body<List<CardRoot>>()
+        return cards
+    } else {
+        Log.e("HTTP", "Error al obtener los heroes: ${response.status}")
+        return emptyList()
+    }
+}
 suspend fun searchCardByName(name: String): List<CardRoot> {
     val response = HttpClientSingleton.client.get("${Config.BASE_URL}/cards") {
         parameter("name", name)

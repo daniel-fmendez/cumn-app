@@ -1,5 +1,5 @@
 
-package com.example.armoryboxkotline
+package com.example.armoryboxkotline.Decks
 
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
@@ -35,22 +35,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.armoryboxkotline.Conection.Controller.CardRoot
 import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.DeckCard
-import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
-import java.util.UUID
+import com.example.armoryboxkotline.Conection.Controller.HeroesViewModel
+import com.example.armoryboxkotline.FakeTopBar
+import com.example.armoryboxkotline.R
 
+data class DeckCardPair(
+    var deckCard: DeckCard,
+    var cardRoot: CardRoot
+)
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckViewModel){
@@ -62,9 +62,9 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
     var deckName by remember { mutableStateOf("") }
     var selectedDeckType by remember { mutableStateOf(DeckType.Blitz) }
 
-    var deckCards by remember { mutableStateOf<List<DeckCard>>(emptyList()) }
+    var deckCards by remember { mutableStateOf<List<DeckCardPair>>(emptyList()) }
 
-    val totalCards = deckCards.sumOf { it.quantity }
+    val totalCards = deckCards.sumOf { it.deckCard.quantity }
     val maxCards = selectedDeckType.cardLimit
 
 
@@ -73,37 +73,54 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
     var searchTriggered by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
+    //Seleccion de heroe
+    var showHeroSelection by remember { mutableStateOf(false) }
+    var heroId by remember { mutableStateOf("") }
+    
     //Inicializa valores
     LaunchedEffect(deck) {
         if (deck != null) {
             deckName = deck.name
             selectedDeckType = DeckType.fromString(deck.type)
-            deckCards = emptyList()
+
+            //Cambiar para poder precargar las cartas
+            val loadedDeckCards = emptyList<DeckCardPair>()
+            deckCards = loadedDeckCards
         }
     }
 
 
-    fun updateCardQuantity(cardToUpdate: CardRoot, newQuantity: Int) {
-        val deckCard = DeckCard(
+    fun updateCardQuantity(cardRoot: CardRoot, newQuantity: Int) {
+        val newDeckCard = DeckCard(
             deckId = deck?.id ?: 0,
-            cardId = cardToUpdate.uniqueId,
+            cardId = cardRoot.uniqueId,
             quantity = newQuantity
         )
 
         if (newQuantity <= 0) {
-            deckCards = deckCards.filter { it.cardId != deckCard.cardId }
+            // Remove the card from the deck
+            deckCards = deckCards.filter { it.deckCard.cardId != newDeckCard.cardId }
         } else {
-            Log.d("DeckUpdate", "ID to find: ${deckCard.cardId}")
-            val existingCard = deckCards.find { it.cardId == deckCard.cardId }
+            // Find if the card is already in the deck
+            val existingCardIndex =
+                deckCards.indexOfFirst { it.deckCard.cardId == newDeckCard.cardId }
 
-            if (existingCard != null) {
+            if (existingCardIndex != -1) {
+                // Update the existing card quantity
                 Log.d("DeckUpdate", "Carta ya en mazo. Actualizando cantidad.")
-                deckCards = deckCards.map {
-                    if (it.cardId == deckCard.cardId) it.copy(quantity = newQuantity) else it
+                deckCards = deckCards.toMutableList().apply {
+                    this[existingCardIndex] = DeckCardPair(
+                        deckCard = this[existingCardIndex].deckCard.copy(quantity = newQuantity),
+                        cardRoot = this[existingCardIndex].cardRoot
+                    )
                 }
             } else {
+                // Add new card to the deck
                 Log.d("DeckUpdate", "Carta nueva. Añadiendo con cantidad: $newQuantity")
-                deckCards = deckCards.plus(deckCard)
+                deckCards = deckCards + DeckCardPair(
+                    deckCard = newDeckCard,
+                    cardRoot = cardRoot
+                )
             }
         }
     }
@@ -221,7 +238,16 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            HeroCard()
+                            if(heroId.isEmpty()){
+                                SelectHeroCard(
+                                    onSelect = {
+                                        showHeroSelection = true
+                                        Log.d("SelectHero", "Click")
+                                    }
+                                )
+                            }else{
+                                HeroCard(heroId)
+                            }
                         }
                     }
                 }
@@ -410,11 +436,11 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            deckCards.forEach { deckCard ->
-                                val maxAllowed = maxCards - (totalCards - deckCard.quantity)
+                            deckCards.forEach { deckCardPair  ->
+                                val maxAllowed = maxCards - (totalCards - deckCardPair.deckCard.quantity)
 
                                 CardInDeck (
-                                    deckCard = deckCard,
+                                    deckCardPair = deckCardPair,
                                     maxAllowed = maxAllowed,
                                     onQuantityChanged = { card, newQuantity ->
                                         updateCardQuantity(card, newQuantity)
@@ -464,24 +490,40 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             ) {
                                 filteredItems.forEach { card ->
                                     // Buscar si la carta ya está en el mazo para obtener su cantidad
-                                    val deckCard = deckCards.find { it.cardId == card.uniqueId }
-                                    val itemQuantityInDeck = deckCard?.quantity ?: 0
-                                    val maxAllowed = maxCards - (totalCards - itemQuantityInDeck)
+                                    val existingPair = deckCards.find { it.deckCard.cardId == card.uniqueId }
 
-                                    // Crear un objeto DeckCard temporal para mostrar
-                                    val tempDeckCard = DeckCard(
-                                        deckId = deck?.id ?: 0,
-                                        cardId = card.uniqueId,
-                                        quantity = itemQuantityInDeck
-                                    )
+                                    if (existingPair != null) {
+                                        // Card is already in the deck, use existing pair
+                                        val maxAllowed = maxCards - (totalCards - existingPair.deckCard.quantity)
 
-                                    CardInDeck(
-                                        deckCard = tempDeckCard,
-                                        maxAllowed = maxAllowed,
-                                        onQuantityChanged = { c, newQuantity ->
-                                            updateCardQuantity(c, newQuantity)
-                                        }
-                                    )
+                                        CardInDeck(
+                                            deckCardPair = existingPair,
+                                            maxAllowed = maxAllowed,
+                                            onQuantityChanged = { c, newQuantity ->
+                                                updateCardQuantity(c, newQuantity)
+                                            }
+                                        )
+                                    } else {
+                                        // Card is not in the deck, create a temporary DeckCardPair
+                                        val tempDeckCard = DeckCard(
+                                            deckId = deck?.id ?: 0,
+                                            cardId = card.uniqueId,
+                                            quantity = 0
+                                        )
+
+                                        val tempPair = DeckCardPair(
+                                            deckCard = tempDeckCard,
+                                            cardRoot = card
+                                        )
+
+                                        CardInDeck(
+                                            deckCardPair = tempPair,
+                                            maxAllowed = maxCards - totalCards,
+                                            onQuantityChanged = { c, newQuantity ->
+                                                updateCardQuantity(c, newQuantity)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -603,19 +645,128 @@ fun DeckTypeButton(
     }
 }
 @Composable
-fun HeroCard() {
+fun HeroCard(heroId: String) {
+    val heroesViewModel = viewModel<HeroesViewModel>()
+    val hero by heroesViewModel.hero.observeAsState(initial = null)
+
+    LaunchedEffect(heroId) {
+        heroesViewModel.fetchHeroById(heroId)
+    }
+    if(hero!=null){
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .wrapContentHeight(align = Alignment.Top),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
+                            .width(50.dp)
+                            .height(65.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Arte",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(4f)
+                        .fillMaxHeight()
+                        .padding(vertical = 12.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(start = 16.dp),
+                        verticalArrangement = Arrangement.Top // Cambiado a Top
+                    ) {
+                        Text(
+                            text = hero!!.name,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = generateSubtitle(hero!!.types),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = { /* No hace nada por ahora */ },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Eliminar",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CardInDeck(
+    deckCardPair: DeckCardPair,
+    maxAllowed: Int = Int.MAX_VALUE,
+    onQuantityChanged: (CardRoot, Int) -> Unit
+) {
+    // We already have the card data, no need to look it up
+    val card = deckCardPair.cardRoot
+    val deckCard = deckCardPair.deckCard
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .wrapContentHeight()
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surface),
+        contentAlignment = Alignment.TopCenter
     ) {
+        // Mostrar información de la carta
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-
+            // Imagen de la carta
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -640,6 +791,7 @@ fun HeroCard() {
                 }
             }
 
+            // Información de la carta
             Box(
                 modifier = Modifier
                     .weight(4f)
@@ -650,205 +802,142 @@ fun HeroCard() {
                     modifier = Modifier
                         .fillMaxHeight()
                         .padding(start = 16.dp),
-                    verticalArrangement = Arrangement.Top // Cambiado a Top
+                    verticalArrangement = Arrangement.Top
                 ) {
                     Text(
-                        text = "Nombre del heroe",
+                        text = card.name,
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Clase · Tipo",
+                        text = generateSubtitle(card.types),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
 
+            // Controles de cantidad (same as before)
             Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
+                    .weight(2f)
                     .fillMaxHeight()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
             ) {
-                IconButton(
-                    onClick = { /* No hace nada por ahora */ },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            shape = CircleShape
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Eliminar",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CardInDeck(
-    deckCard: DeckCard,
-    maxAllowed: Int = Int.MAX_VALUE,
-    onQuantityChanged: (CardRoot, Int) -> Unit
-) {
-    val cardsViewModel = viewModel<CardsViewModel>()
-
-    var card by remember { mutableStateOf<CardRoot?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var hasError by remember { mutableStateOf(false) }
-
-    LaunchedEffect(deckCard.cardId) {
-        isLoading = true
-        hasError = false
-        val result = cardsViewModel.getCardByIdDirect(deckCard.cardId)
-        if (result != null) {
-            card = result
-        } else {
-            hasError = true
-        }
-        isLoading = false
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surface),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        when {
-            isLoading -> {
-                // Estado de carga
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            hasError -> {
-                // Estado de error
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Error al cargar la carta",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            card == null -> {
-                // Estado cuando la carta no se encontró
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Carta no encontrada",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            else -> {
-                // Mostrar información de la carta
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    // Imagen de la carta
+                if (deckCard.quantity == 0) {
+                    // Botón para añadir la primera carta
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .wrapContentHeight(align = Alignment.Top),
-                        contentAlignment = Alignment.TopCenter
+                            .size(32.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
+                        IconButton(
+                            onClick = {
+                                if (maxAllowed > 0) {
+                                    onQuantityChanged(card, 1)
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Agregar",
+                                tint = if (maxAllowed > 0)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            )
+                        }
+                    }
+                } else {
+                    // Controles para cartas ya añadidas (mostrar cantidad y botones +/-)
+                    Row {
+                        // Botón de restar
                         Box(
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .padding(start = 12.dp, top = 12.dp, bottom = 12.dp)
-                                .width(50.dp)
-                                .height(65.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(MaterialTheme.colorScheme.surface),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Arte",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    // Información de la carta
-                    Box(
-                        modifier = Modifier
-                            .weight(4f)
-                            .fillMaxHeight()
-                            .padding(vertical = 12.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier
+                                .weight(1f)
                                 .fillMaxHeight()
-                                .padding(start = 16.dp),
-                            verticalArrangement = Arrangement.Top
+                                .padding(vertical = 12.dp),
                         ) {
-                            Text(
-                                text = card?.name ?: "Cargando...",
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = generateSubtitle(card?.types ?: emptyList()),
-                                color = MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-
-                    // Controles de cantidad
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .weight(2f)
-                            .fillMaxHeight()
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                    ) {
-                        if (deckCard.quantity == 0) {
-                            // Botón para añadir la primera carta
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .background(
-                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
                                         shape = CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 IconButton(
                                     onClick = {
-                                        if (maxAllowed > 0 && card != null) {
-                                            onQuantityChanged(card!!, 1)
+                                        onQuantityChanged(card, deckCard.quantity - 1)
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.minus),
+                                        contentDescription = "Quitar",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Mostrar cantidad
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
+                                        shape = CircleShape
+                                    )
+                                    .defaultMinSize(minWidth = 32.dp)
+                                    .wrapContentSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = deckCard.quantity.toString(),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                        }
+
+                        // Botón de añadir
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (deckCard.quantity < maxAllowed) {
+                                            onQuantityChanged(card, deckCard.quantity + 1)
                                         }
                                     },
                                     modifier = Modifier.size(32.dp)
@@ -856,112 +945,11 @@ fun CardInDeck(
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = "Agregar",
-                                        tint = if (maxAllowed > 0 && card != null)
+                                        tint = if (deckCard.quantity < maxAllowed)
                                             MaterialTheme.colorScheme.primary
                                         else
                                             MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                     )
-                                }
-                            }
-                        } else {
-                            // Controles para cartas ya añadidas (mostrar cantidad y botones +/-)
-                            Row {
-                                // Botón de restar
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(vertical = 12.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                if (card != null) {
-                                                    onQuantityChanged(card!!, deckCard.quantity - 1)
-                                                }
-                                            },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.minus),
-                                                contentDescription = "Quitar",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Mostrar cantidad
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(horizontal = 4.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
-                                                shape = CircleShape
-                                            )
-                                            .defaultMinSize(minWidth = 32.dp)
-                                            .wrapContentSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = deckCard.quantity.toString(),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.titleLarge
-                                        )
-                                    }
-                                }
-
-                                // Botón de añadir
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.1f),
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                if (deckCard.quantity < maxAllowed && card != null) {
-                                                    onQuantityChanged(card!!, deckCard.quantity + 1)
-                                                }
-                                            },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Add,
-                                                contentDescription = "Agregar",
-                                                tint = if (deckCard.quantity < maxAllowed && card != null)
-                                                    MaterialTheme.colorScheme.primary
-                                                else
-                                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                            )
-                                        }
-                                    }
                                 }
                             }
                         }

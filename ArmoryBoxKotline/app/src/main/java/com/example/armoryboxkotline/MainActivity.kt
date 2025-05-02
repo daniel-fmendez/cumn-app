@@ -30,6 +30,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.createGraph
 import androidx.navigation.navArgument
 import com.example.armoryboxkotline.Conection.SessionManager
+import com.example.armoryboxkotline.Decks.CreateDeck
+import com.example.armoryboxkotline.Decks.DeckDetails
+import com.example.armoryboxkotline.Decks.DecksScreen
+import com.example.armoryboxkotline.Decks.SelectHeroScreen
+import com.example.armoryboxkotline.Decks.SharedDeckViewModel
 import com.example.armoryboxkotline.UserManagement.AccessScreen
 import com.example.armoryboxkotline.UserManagement.EditProfileScreen
 import com.example.armoryboxkotline.UserManagement.ProfileScreen

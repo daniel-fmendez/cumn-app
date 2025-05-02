@@ -1,7 +1,5 @@
-package com.example.armoryboxkotline
+package com.example.armoryboxkotline.Decks
 
-import android.os.Parcelable
-import android.widget.Space
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,8 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -31,15 +27,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.Deck
 import com.example.armoryboxkotline.Conection.Controller.DeckCard
 import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
 import com.example.armoryboxkotline.Conection.SessionManager
-import com.example.armoryboxkotline.UserManagement.AccessScreen
+import com.example.armoryboxkotline.Screen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
-import kotlinx.parcelize.Parcelize
-import java.util.UUID
 
 /*
 @Parcelize

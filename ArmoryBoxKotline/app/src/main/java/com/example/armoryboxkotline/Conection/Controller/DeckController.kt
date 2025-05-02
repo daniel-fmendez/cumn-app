@@ -178,7 +178,7 @@ data class DeckCard(
     val deckId: Int,
     @SerialName("card_id")
     val cardId: String,
-    val quantity: Int,
+    var quantity: Int,
 )
 
 suspend fun updateDeckCard(deckId: Int, cardId: String, quantity: Int): DeckCard? {
