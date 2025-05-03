@@ -562,7 +562,7 @@ fun CreateDeck(navController: NavController){
                     Button(
                         onClick = {
                             if(deckName.isNotEmpty() && heroId.isNotEmpty()){
-                                decksViewModel.createDeckWithCards(deckName, SessionManager.userId!!,heroId, deckCards)
+                                decksViewModel.createDeckWithCards(deckName, SessionManager.userId!!,heroId, selectedDeckType.toString(),deckCards)
 
                                 navController.popBackStack()
                             }else {

@@ -71,7 +71,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 
 
     val deckCardsMap by decksViewModel.deckCardsMap.collectAsState(initial = emptyMap())
-    var deckCardPairs = if (deck != null) deckCardsMap[deck.id] ?: emptyList() else emptyList()
+    var deckCardPairs by remember { mutableStateOf<List<DeckCardPair>>(emptyList()) }
 
     // Load the deck cards if needed
     LaunchedEffect(deck?.id) {
@@ -79,7 +79,11 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
             decksViewModel.loadDeckCards(deck.id)
         }
     }
-
+    LaunchedEffect(deck?.id, deckCardsMap) {
+        if (deck != null && deckCardsMap.containsKey(deck.id)) {
+            deckCardPairs = deckCardsMap[deck.id] ?: emptyList()
+        }
+    }
     val totalCards = deckCardPairs.sumOf { it.deckCard.quantity }
     val maxCards = selectedDeckType.cardLimit
 
@@ -117,7 +121,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
             // Find if the card is already in the deck
             val existingCardIndex =
                 deckCardPairs.indexOfFirst { it.deckCard.cardId == newDeckCard.cardId }
-
+            Log.d("DeckUpdate",deckCardPairs.toString())
             if (existingCardIndex != -1) {
                 // Update the existing card quantity
                 Log.d("DeckUpdate", "Carta ya en mazo. Actualizando cantidad.")
@@ -576,7 +580,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                         // Crear o actualizar el mazo
 
                         if(deckName.isNotEmpty() && heroId.isNotEmpty()){
-                            decksViewModel.modifyDeckWithCards(deckName, deck!!.id,heroId, deckCardPairs)
+                            decksViewModel.modifyDeckWithCards(deckName, deck!!.id,heroId, selectedDeckType.toString(),deckCardPairs)
 
                             navController.popBackStack()
                         }else {

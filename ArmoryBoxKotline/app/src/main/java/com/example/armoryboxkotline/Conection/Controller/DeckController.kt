@@ -62,10 +62,10 @@ class DecksViewModel : ViewModel() {
         }
     }
 
-    fun createDeck(name: String, userId: Int, heroId: String) {
+    fun createDeck(name: String, userId: Int, heroId: String, type: String) {
         viewModelScope.launch {
             try {
-                val newDeck = addDeck(name, userId, heroId)
+                val newDeck = addDeck(name, userId, heroId, type)
                 if (newDeck != null) {
                     // Añade el nuevo mazo a la lista existente
                     _decks.value = _decks.value + newDeck
@@ -75,10 +75,10 @@ class DecksViewModel : ViewModel() {
             }
         }
     }
-    fun modifyDeck(name: String, deckId: Int, heroId: String) {
+    fun modifyDeck(name: String, deckId: Int, heroId: String, type: String) {
         viewModelScope.launch {
             try {
-                val updatedDeck = updateDeck(name, deckId, heroId)
+                val updatedDeck = updateDeck(name, deckId, heroId, type)
                 if (updatedDeck != null) {
                     _decks.value = _decks.value.map {
                         if (it.id == deckId) updatedDeck else it
@@ -89,10 +89,11 @@ class DecksViewModel : ViewModel() {
             }
         }
     }
-    fun modifyDeckWithCards(name: String, deckId: Int, heroId: String, cards :List<DeckCardPair>) {
+    fun modifyDeckWithCards(name: String, deckId: Int, heroId: String,  type: String, cards :List<DeckCardPair>) {
         viewModelScope.launch {
             try {
-                val updatedDeck = updateDeck(name, deckId, heroId)
+                cleanDeck(deckId)
+                val updatedDeck = updateDeck(name, deckId, heroId, type)
                 if (updatedDeck != null) {
                     _decks.value = _decks.value.map {
                         if (it.id == deckId) updatedDeck else it
@@ -108,10 +109,10 @@ class DecksViewModel : ViewModel() {
         }
     }
 
-    fun createDeckWithCards(name: String, userId: Int, heroId: String, cards :List<DeckCardPair>) {
+    fun createDeckWithCards(name: String, userId: Int, heroId: String, type: String, cards :List<DeckCardPair>) {
         viewModelScope.launch {
             try {
-                val newDeck = addDeck(name, userId, heroId)
+                val newDeck = addDeck(name, userId, heroId, type)
                 if (newDeck != null) {
                     // Añade el nuevo mazo a la lista existente
                     _decks.value = _decks.value + newDeck
@@ -150,7 +151,6 @@ class DecksViewModel : ViewModel() {
         }
     }
 
-
     fun updateCardInDeck(deckId: Int, cardId: String, quantity: Int) {
         viewModelScope.launch {
             try {
@@ -176,6 +176,15 @@ class DecksViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 Log.e("DecksViewModel", "Error al actualizar carta en mazo", e)
+            }
+        }
+    }
+    fun cleanDeck(deckId: Int){
+        viewModelScope.launch {
+            try {
+                val deletedCards = cleanDeckCards(deckId)
+            }catch (e: Exception) {
+                Log.e("DecksViewModel", "Error al eliminar cartas en mazo", e)
             }
         }
     }
@@ -228,13 +237,14 @@ suspend fun removeDeckById(id: Int): Deck? {
 data class AddDeckRequest(
     val name: String,
     @SerialName("user_id") val userId: Int,
-    @SerialName("hero_id") val heroId: String
+    @SerialName("hero_id") val heroId: String,
+    val type: String
 )
 
-suspend fun addDeck(name: String, userId: Int, heroId: String): Deck? {
-    val requestBody = AddDeckRequest(name, userId, heroId)
+suspend fun addDeck(name: String, userId: Int, heroId: String, type: String): Deck? {
+    val requestBody = AddDeckRequest(name, userId, heroId, type)
 
-    val response = HttpClientSingleton.client.post("${Config.BASE_URL}/add_deck/") {
+    val response = HttpClientSingleton.client.post("${Config.BASE_URL}/add_deck") {
         contentType(ContentType.Application.Json)
         setBody(requestBody)
     }
@@ -252,11 +262,12 @@ suspend fun addDeck(name: String, userId: Int, heroId: String): Deck? {
 data class UpdateDeckRequest(
     @SerialName("id") val deckId: Int,
     val name: String,
-    @SerialName("hero_id") val heroId: String
+    @SerialName("hero_id") val heroId: String,
+    val type: String
 )
 
-suspend fun updateDeck(name: String, deckId: Int, heroId: String): Deck? {
-    val requestBody = UpdateDeckRequest(deckId, name, heroId)
+suspend fun updateDeck(name: String, deckId: Int, heroId: String,  type: String): Deck? {
+    val requestBody = UpdateDeckRequest(deckId, name, heroId, type)
     Log.d("UPDATE_DECK", "Enviando request con: deckId=$deckId, name=$name, heroId=$heroId")
 
     return try {
@@ -324,6 +335,29 @@ suspend fun getDeckCards(deckId: Int): List<DeckCard>{
         return deck_cards
     } else {
         Log.e("HTTP", "Error al obtener los mazos: ${response.status}")
+        return emptyList()
+    }
+}
+
+@Serializable
+data class CleanRequest(
+    @SerialName("deck_id") val deckId: Int,
+)
+
+suspend fun cleanDeckCards(deckId: Int): List<DeckCard> {
+    val requestBody = CleanRequest(deckId)
+
+    val response = HttpClientSingleton.client.post("${Config.BASE_URL}/clean_deck") {
+        contentType(ContentType.Application.Json)
+        setBody(
+            requestBody
+        )
+    }
+
+    if(response.status.value == 200){
+        val deckCards = response.body<List<DeckCard>>()
+        return deckCards
+    }else {
         return emptyList()
     }
 }
