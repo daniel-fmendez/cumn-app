@@ -27,8 +27,14 @@ class DecksViewModel : ViewModel() {
     private val _deckCards = MutableStateFlow<List<DeckCard>>(emptyList())
     val deckCards = _deckCards.asStateFlow()
 
+    private val _cardsInDeck = MutableStateFlow<List<DeckCardPair>>(emptyList())
+    val cardsInDeck = _cardsInDeck.asStateFlow()
+
     private val _deck_result = MutableLiveData<Deck>()
     val deckResult : LiveData<Deck> get() = _deck_result
+
+    private val _deckCardsMap = MutableStateFlow<Map<Int, List<DeckCardPair>>>(emptyMap())
+    val deckCardsMap = _deckCardsMap.asStateFlow()
 
     fun userDecks(userId: Int) {
         viewModelScope.launch {
@@ -69,6 +75,38 @@ class DecksViewModel : ViewModel() {
             }
         }
     }
+    fun modifyDeck(name: String, deckId: Int, heroId: String) {
+        viewModelScope.launch {
+            try {
+                val updatedDeck = updateDeck(name, deckId, heroId)
+                if (updatedDeck != null) {
+                    _decks.value = _decks.value.map {
+                        if (it.id == deckId) updatedDeck else it
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("DecksViewModel", "Error al actualizar mazo", e)
+            }
+        }
+    }
+    fun modifyDeckWithCards(name: String, deckId: Int, heroId: String, cards :List<DeckCardPair>) {
+        viewModelScope.launch {
+            try {
+                val updatedDeck = updateDeck(name, deckId, heroId)
+                if (updatedDeck != null) {
+                    _decks.value = _decks.value.map {
+                        if (it.id == deckId) updatedDeck else it
+                    }
+
+                    for (card in cards){
+                        updateCardInDeck(updatedDeck.id,card.deckCard.cardId,card.deckCard.quantity)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("DecksViewModel", "Error al actualizar mazo", e)
+            }
+        }
+    }
 
     fun createDeckWithCards(name: String, userId: Int, heroId: String, cards :List<DeckCardPair>) {
         viewModelScope.launch {
@@ -90,14 +128,28 @@ class DecksViewModel : ViewModel() {
     fun loadDeckCards(deckId: Int) {
         viewModelScope.launch {
             try {
-                val cards = getDeckCards(deckId)
-                _deckCards.value = cards
+                val deckCards = getDeckCards(deckId)
+                _deckCards.value = deckCards
+
+                var cards: List<DeckCardPair> = listOf()
+
+                deckCards.forEach { card ->
+                    val root = getCardById(card.cardId)
+                    if(root != null) {
+                        cards = cards + DeckCardPair(card, root)
+                    }
+                }
+
+                _cardsInDeck.value = cards
+
+                // Update the map with this specific deck's cards
+                _deckCardsMap.value = _deckCardsMap.value + (deckId to cards)
             } catch (e: Exception) {
                 Log.e("DecksViewModel", "Error al cargar cartas del mazo", e)
-                _deckCards.value = emptyList()
             }
         }
     }
+
 
     fun updateCardInDeck(deckId: Int, cardId: String, quantity: Int) {
         viewModelScope.launch {
@@ -193,6 +245,39 @@ suspend fun addDeck(name: String, userId: Int, heroId: String): Deck? {
     } else {
         Log.e("HTTP", "Error al obtener los mazos: ${response.status}")
         return null
+    }
+}
+
+@Serializable
+data class UpdateDeckRequest(
+    @SerialName("id") val deckId: Int,
+    val name: String,
+    @SerialName("hero_id") val heroId: String
+)
+
+suspend fun updateDeck(name: String, deckId: Int, heroId: String): Deck? {
+    val requestBody = UpdateDeckRequest(deckId, name, heroId)
+    Log.d("UPDATE_DECK", "Enviando request con: deckId=$deckId, name=$name, heroId=$heroId")
+
+    return try {
+        val response = HttpClientSingleton.client.post("${Config.BASE_URL}/update_deck") {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }
+
+        Log.d("UPDATE_DECK", "Respuesta HTTP: ${response.status}")
+
+        if (response.status.value == 200) {
+            val deck = response.body<Deck>()
+            Log.d("UPDATE_DECK", "Deck actualizado exitosamente: $deck")
+            deck
+        } else {
+            Log.e("UPDATE_DECK", "Error al actualizar el mazo: ${response.status}")
+            null
+        }
+    } catch (e: Exception) {
+        Log.e("UPDATE_DECK", "Excepción al actualizar el mazo: ${e.message}", e)
+        null
     }
 }
 

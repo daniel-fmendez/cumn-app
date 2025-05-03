@@ -43,7 +43,9 @@ import androidx.navigation.NavController
 import com.example.armoryboxkotline.Conection.Controller.CardRoot
 import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.DeckCard
+import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
 import com.example.armoryboxkotline.Conection.Controller.HeroesViewModel
+import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.FakeTopBar
 import com.example.armoryboxkotline.R
 
@@ -51,23 +53,38 @@ data class DeckCardPair(
     var deckCard: DeckCard,
     var cardRoot: CardRoot
 )
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckViewModel){
-    val deck = sharedDeckViewModel.selectedDeck
+    val decksViewModel = viewModel<DecksViewModel>()
     val cardsViewModel = viewModel<CardsViewModel>()
+
+    val deck = sharedDeckViewModel.selectedDeck
+
     val cards by cardsViewModel.cards.collectAsState(initial = emptyList())
     val cardImages by cardsViewModel.cardImages.collectAsState()
 
     var deckName by remember { mutableStateOf("") }
     var selectedDeckType by remember { mutableStateOf(DeckType.Blitz) }
 
-    var deckCards by remember { mutableStateOf<List<DeckCardPair>>(emptyList()) }
 
-    val totalCards = deckCards.sumOf { it.deckCard.quantity }
+
+    val deckCardsMap by decksViewModel.deckCardsMap.collectAsState(initial = emptyMap())
+    var deckCardPairs = if (deck != null) deckCardsMap[deck.id] ?: emptyList() else emptyList()
+
+    // Load the deck cards if needed
+    LaunchedEffect(deck?.id) {
+        if (deck != null && !deckCardsMap.containsKey(deck.id)) {
+            decksViewModel.loadDeckCards(deck.id)
+        }
+    }
+
+    val totalCards = deckCardPairs.sumOf { it.deckCard.quantity }
     val maxCards = selectedDeckType.cardLimit
 
-
+    val cardLimit = selectedDeckType.cardLimit
+    val cardProgress = if (cardLimit > 0) (totalCards.toFloat() / cardLimit.toFloat()) else 0f
     //Search
     var searchQuery by remember { mutableStateOf("") }
     var searchTriggered by remember { mutableStateOf(false) }
@@ -78,17 +95,13 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
     var heroId by remember { mutableStateOf("") }
     
     //Inicializa valores
-    LaunchedEffect(deck) {
+    LaunchedEffect(deck?.id) {
         if (deck != null) {
             deckName = deck.name
             selectedDeckType = DeckType.fromString(deck.type)
-
-            //Cambiar para poder precargar las cartas
-            val loadedDeckCards = emptyList<DeckCardPair>()
-            deckCards = loadedDeckCards
+            heroId = deck!!.heroId
         }
     }
-
 
     fun updateCardQuantity(cardRoot: CardRoot, newQuantity: Int) {
         val newDeckCard = DeckCard(
@@ -99,16 +112,16 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 
         if (newQuantity <= 0) {
             // Remove the card from the deck
-            deckCards = deckCards.filter { it.deckCard.cardId != newDeckCard.cardId }
+            deckCardPairs = deckCardPairs.filter { it.deckCard.cardId != newDeckCard.cardId }
         } else {
             // Find if the card is already in the deck
             val existingCardIndex =
-                deckCards.indexOfFirst { it.deckCard.cardId == newDeckCard.cardId }
+                deckCardPairs.indexOfFirst { it.deckCard.cardId == newDeckCard.cardId }
 
             if (existingCardIndex != -1) {
                 // Update the existing card quantity
                 Log.d("DeckUpdate", "Carta ya en mazo. Actualizando cantidad.")
-                deckCards = deckCards.toMutableList().apply {
+                deckCardPairs = deckCardPairs.toMutableList().apply {
                     this[existingCardIndex] = DeckCardPair(
                         deckCard = this[existingCardIndex].deckCard.copy(quantity = newQuantity),
                         cardRoot = this[existingCardIndex].cardRoot
@@ -117,7 +130,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
             } else {
                 // Add new card to the deck
                 Log.d("DeckUpdate", "Carta nueva. Añadiendo con cantidad: $newQuantity")
-                deckCards = deckCards + DeckCardPair(
+                deckCardPairs = deckCardPairs + DeckCardPair(
                     deckCard = newDeckCard,
                     cardRoot = cardRoot
                 )
@@ -334,6 +347,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             IconButton(
                                 onClick = {
                                     if (searchQuery.isNotBlank()) {
+                                        cardsViewModel.searchCard(searchQuery)
                                         searchTriggered = true
                                         focusManager.clearFocus()
                                     }
@@ -364,6 +378,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                                 keyboardActions = KeyboardActions(
                                     onSearch = {
                                         if (searchQuery.isNotBlank()) {
+                                            cardsViewModel.searchCard(searchQuery)
                                             searchTriggered = true
                                             focusManager.clearFocus()
                                         }
@@ -410,7 +425,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
 
                 // Espaciador
                 item { Spacer(modifier = Modifier.height(16.dp)) }
-                if (!searchTriggered && deckCards.isNotEmpty()) {
+                if (!searchTriggered && deckCardPairs.isNotEmpty()) {
                     item {
                         Column(
                             modifier = Modifier
@@ -419,7 +434,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             horizontalAlignment = Alignment.Start
                         ) {
                             Text(
-                                text = "Cartas en el mazo (${deckCards.size})",
+                                text = "Cartas en el mazo (${deckCardPairs.size})",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 fontWeight = FontWeight.Bold,
@@ -436,7 +451,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            deckCards.forEach { deckCardPair  ->
+                            deckCardPairs.forEach { deckCardPair  ->
                                 val maxAllowed = maxCards - (totalCards - deckCardPair.deckCard.quantity)
 
                                 CardInDeck (
@@ -490,7 +505,7 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                             ) {
                                 filteredItems.forEach { card ->
                                     // Buscar si la carta ya está en el mazo para obtener su cantidad
-                                    val existingPair = deckCards.find { it.deckCard.cardId == card.uniqueId }
+                                    val existingPair = deckCardPairs.find { it.deckCard.cardId == card.uniqueId }
 
                                     if (existingPair != null) {
                                         // Card is already in the deck, use existing pair
@@ -559,19 +574,15 @@ fun DeckDetails(navController: NavController, sharedDeckViewModel: SharedDeckVie
                 Button(
                     onClick = {
                         // Crear o actualizar el mazo
-                        if (deck != null) {
-                            // Actualizar mazo existente
-                            val updatedDeck = deck.copy(name = deckName, type = selectedDeckType.name)
-                            sharedDeckViewModel.updateDeck(updatedDeck)
 
-                            // También actualizar las cartas del mazo en la base de datos
-                            // (Este código dependerá de cómo manejes la persistencia)
-                        } else {
-                            // Crear nuevo mazo
-                            // (Implementación dependiendo de tu modelo de datos)
+                        if(deckName.isNotEmpty() && heroId.isNotEmpty()){
+                            decksViewModel.modifyDeckWithCards(deckName, deck!!.id,heroId, deckCardPairs)
+
+                            navController.popBackStack()
+                        }else {
+                            Log.d("DeckCreate", "No se actualizo")
                         }
 
-                        navController.popBackStack()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,

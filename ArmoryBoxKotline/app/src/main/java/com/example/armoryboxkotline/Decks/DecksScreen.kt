@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
@@ -212,21 +213,31 @@ fun DeckTopbar(navController: NavController){
 }
 
 @Composable
-fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewModel, deck: Deck){
+fun DeckCard(
+    navController: NavController,
+    sharedDeckViewModel: SharedDeckViewModel,
+    deck: Deck
+){
     val decksViewModel = viewModel<DecksViewModel>()
-    val deckCards by decksViewModel.deckCards.collectAsState(initial = emptyList())
 
-    LaunchedEffect(decksViewModel) {
-        decksViewModel.loadDeckCards(deck.id)
+    val deckCardsMap by decksViewModel.deckCardsMap.collectAsState(initial = emptyMap())
+    val thisDeckCards = deckCardsMap[deck.id] ?: emptyList()
+
+    LaunchedEffect(deck.id) {
+        if (!deckCardsMap.containsKey(deck.id)) {
+            decksViewModel.loadDeckCards(deck.id)
+        }
     }
 
-    fun getQuantity(cards: List<DeckCard>): Int {
+    fun getQuantity(): Int {
         var quantity = 0
-        for (card in cards) {
-            quantity += card.quantity
+
+        thisDeckCards.forEach { cardPair ->
+            quantity += cardPair.deckCard.quantity
         }
         return quantity
     }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -272,7 +283,7 @@ fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewMo
                     modifier = Modifier
                         .fillMaxHeight()
                         .padding(start = 16.dp),
-                    verticalArrangement = Arrangement.Top // Cambiado a Top
+                    verticalArrangement = Arrangement.Top
                 ) {
                     // Información superior
                     Column {
@@ -296,7 +307,8 @@ fun DeckCard(navController: NavController, sharedDeckViewModel: SharedDeckViewMo
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         val deckType = DeckType.fromString(deck.type)
-                        val cards = getQuantity(deckCards)
+                        // Use the corrected getQuantity function
+                        val cards = getQuantity()
                         val maxCards = deckType.cardLimit
                         val progress = cards.toFloat() / maxCards.toFloat()
 

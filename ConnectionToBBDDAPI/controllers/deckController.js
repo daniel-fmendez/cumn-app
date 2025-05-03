@@ -15,6 +15,7 @@ const createDeck = async (req, res) => {
         res.status(500).send("Error interno");
     }
 };
+
 //Delete deck 
 const deleteDeck = async (req, res) => {
     const { id } = req.body;
@@ -35,7 +36,26 @@ const deleteDeck = async (req, res) => {
         res.status(500).send("Error interno");
     }
 };
+//Actualizar deck
+const updateDeck = async (req, res) => {
+    const { id, name, hero_id } = req.body;
 
+    try {
+        const result = await client.query(
+            'UPDATE public.decks SET name = $1, hero_id = $2 WHERE id = $3 RETURNING *',
+            [name, hero_id, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).send("Deck no encontrado");
+        }
+
+        res.status(200).json(result.rows[0]);
+    } catch (err) {
+        console.error("Error en updateDeck:", err);
+        res.status(500).send("Error interno");
+    }
+};
 
 // Obtener mazos de un usuario
 const getUserDecks = async (req, res) => {
@@ -102,5 +122,6 @@ module.exports = {
     getUserDecks,
     updateDeckCard,
     getDeckCards,
-    deleteDeck
+    deleteDeck,
+    updateDeck
 };
