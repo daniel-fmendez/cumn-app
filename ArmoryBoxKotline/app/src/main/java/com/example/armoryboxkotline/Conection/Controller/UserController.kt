@@ -61,6 +61,34 @@ class CollectionViewModel : ViewModel() {
             }
         }
     }
+
+    fun updateCollection(userId: Int, card_id: String, quantity: Int){
+        viewModelScope.launch {
+            try {
+                var cardCollection = updateUserCollection(userId,card_id,quantity)
+
+                if(cardCollection != null){
+                    val currentCards = _cardCollection.value.toMutableList()
+                    val existingCardIndex = currentCards.indexOfFirst { it.card_id == card_id && it.user_id == userId }
+                    if(quantity>0){
+                        if (existingCardIndex >= 0) {
+                            currentCards[existingCardIndex] = cardCollection
+                        } else {
+                            currentCards.add(cardCollection)
+                        }
+                    }else{
+                        if (existingCardIndex >= 0) {
+                            currentCards.removeAt(existingCardIndex)
+                        }
+                    }
+                    _cardCollection.value = currentCards
+                }
+            } catch (e: Exception) {
+                Log.e("AccessViewModel", "Error al actualizar la coleccion", e)
+            }
+        }
+    }
+
 }
 
 
@@ -149,5 +177,23 @@ suspend fun getCollection(userId: Int): List<CardCollection> {
     } else {
         Log.e("HTTP", "Error al obtener los mazos: ${response.status}")
         return emptyList()
+    }
+}
+
+suspend fun updateUserCollection(userId: Int, card_id: String, quantity: Int): CardCollection?{
+    val request = CardCollection(userId,card_id,quantity)
+    val response = HttpClientSingleton.client.post("${Config.BASE_URL}/update_user_card") {
+        contentType(ContentType.Application.Json)
+        setBody(request)
+    }
+
+    if(response.status.value == 201){
+        val cardCollection = response.body<CardCollection>()
+        return cardCollection
+    } else if(response.status.value == 200) {
+        return null
+    }else {
+        Log.e("HTTP", "Error al actualizar la coleccion: ${response.status}")
+        return null
     }
 }

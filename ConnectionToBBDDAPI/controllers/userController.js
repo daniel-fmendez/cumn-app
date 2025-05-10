@@ -65,7 +65,7 @@ const updateUserCard = async (req, res) => {
                 RETURNING *`,
                 [user_id, card_id, quantity]
             );
-            res.status(200).json(result.rows[0]);
+            res.status(201).json(result.rows[0]);
         } else {
             await client.query(
                 'DELETE FROM public.user_cards WHERE user_id = $1 AND card_id = $2',
