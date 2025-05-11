@@ -37,15 +37,17 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Gold,
-    onPrimary = Color.Black,
-    secondary = Silver.copy(alpha = 0.7f),  // Versión más suave para tema claro
-    onSecondary = Color.Black,
-    tertiary = Bronze,
-    background = Color.White,
-    surface = Color(0xFFF5F5F5),
-    onBackground = Color.Black,
-    onSurface = Color.Black
+    primary = Gold,                // Color de acento principal (botones, elementos destacados)
+    onPrimary = Color.Black,       // Color de texto sobre elementos primary
+    secondary = Silver,            // Color secundario para elementos menos destacados
+    onSecondary = Color.Black,     // Color de texto sobre elementos secondary
+    tertiary = Bronze,             // Color terciario para variedad visual
+    background = DarkBackground,   // Color de fondo de la pantalla
+    surface = DarkSurface,         // Color de tarjetas y superficies elevadas
+    surfaceVariant = DarkSurfaceContainer, //Color para otras tarjetas
+    onBackground = White,          // Color de texto sobre el fondo
+    onSurface = White,              // Color de texto sobre superficies
+    onSurfaceVariant = White
 )
 
 @Composable
