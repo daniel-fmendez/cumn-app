@@ -99,14 +99,12 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import kotlinx.coroutines.CoroutineScope
-
 /**
  * Extrae el área del arte de una carta de Flesh and Blood
  * @param originalBitmap el bitmap original de la carta
  * @param isFullArt indica si la carta es full art, lo que cambiará la región de recorte
  * @return un nuevo bitmap que contiene solo el área del arte
  */
-
 
 /*fun extractCardArtwork(originalBitmap: Bitmap, isFullArt: Boolean = false): Bitmap {
     val width = originalBitmap.width
@@ -514,3 +512,4 @@ fun extractCardArtwork(bitmap: Bitmap, isFullArt: Boolean): Bitmap {
         )
     }
 }
+

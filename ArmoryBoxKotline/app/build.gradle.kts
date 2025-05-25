@@ -77,4 +77,19 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
     //HASH
     implementation("org.mindrot:jbcrypt:0.4")
+    //CAMERAX
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    implementation("androidx.camera:camera-extensions:1.3.1")
+    implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
+
+    //PERMISSIONS
+    implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
+
+    //Materials-icon-extended
+    implementation ("androidx.compose.material3:material3:1.1.0") // o material3 si usas
+    implementation ("androidx.compose.material:material-icons-extended:1.4.3")
+
 }

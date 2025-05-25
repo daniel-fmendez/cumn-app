@@ -27,6 +27,7 @@ sealed class Screen(val rout: String) {
     object Search: Screen("search_screen")
     object Collection: Screen("collection_screen")
     object Decks: Screen("decks_screen")
+    object Scanner: Screen("scanner_screen")
     object Details : Screen("details/{cardId}") {
         fun createRoute(cardId: String) = "details/$cardId"
     }
@@ -60,6 +61,12 @@ val navigationItems = listOf(
         icon = R.drawable.archive_outline,
         selectedIcon =  R.drawable.archive,
         route = Screen.Decks.rout
+    ),
+    NavigationItem(
+        title = "Escaner",
+        icon = R.drawable.outline_camera_alt_24,
+        selectedIcon =  R.drawable.baseline_camera_alt_24,
+        route = Screen.Scanner.rout
     )
 )
 

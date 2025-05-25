@@ -29,16 +29,17 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.createGraph
 import androidx.navigation.navArgument
+import com.example.armoryboxkotline.Collection.CollectionScreen
 import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.Decks.CreateDeck
 import com.example.armoryboxkotline.Decks.DeckDetails
 import com.example.armoryboxkotline.Decks.DecksScreen
-import com.example.armoryboxkotline.Decks.SelectHeroScreen
 import com.example.armoryboxkotline.Decks.SharedDeckViewModel
 import com.example.armoryboxkotline.UserManagement.AccessScreen
 import com.example.armoryboxkotline.UserManagement.EditProfileScreen
 import com.example.armoryboxkotline.UserManagement.ProfileScreen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
+
 
 class MainActivity : ComponentActivity() {
 
@@ -103,31 +104,27 @@ fun MainScreen() {
                 SearchScreen(navController)
             }
             composable(route = Screen.Decks.rout) {
-                var id = SessionManager.userId ?: -1
-                if(id != -1){
-                    DecksScreen(navController,sharedDeckViewModel)
-                }else{
+                val id = SessionManager.userId ?: -1
+                if (id != -1) {
+                    DecksScreen(navController, sharedDeckViewModel)
+                } else {
                     EmpryScreen("Inicia sesión para ver tus mazos")
                 }
-
             }
             composable(route = Screen.Collection.rout) {
-                var id = SessionManager.userId ?: -1
-                if(id != -1){
+                val id = SessionManager.userId ?: -1
+                if (id != -1) {
                     CollectionScreen()
-                }else{
+                } else {
                     EmpryScreen("Inicia sesión para ver tu colección")
                 }
-
             }
             composable(
                 route = Screen.Details.rout,
-                arguments = listOf(
-                    navArgument("cardId") { type = NavType.StringType }
-                )
+                arguments = listOf(navArgument("cardId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val cardId = backStackEntry.arguments?.getString("cardId")
-                DetailsScreen(navController,cardId ?: "")
+                DetailsScreen(navController, cardId ?: "")
             }
             composable(route = Screen.Profile.rout) {
                 ProfileScreen(navController)
@@ -138,16 +135,16 @@ fun MainScreen() {
             composable(route = Screen.AccessScreen.rout) {
                 AccessScreen(navController)
             }
-            composable(
-                route = Screen.DeckDetails.rout
-            ) { backStackEntry ->
-                DeckDetails(navController,sharedDeckViewModel)
+            composable(route = Screen.DeckDetails.rout) {
+                DeckDetails(navController, sharedDeckViewModel)
             }
             composable(route = Screen.CreateDeck.rout) {
                 CreateDeck(navController)
             }
+            composable(route = Screen.Scanner.rout) {
+                ScannerScreen()
+            }
         }
-
         NavHost(
             navController = navController,
             graph = graph,
