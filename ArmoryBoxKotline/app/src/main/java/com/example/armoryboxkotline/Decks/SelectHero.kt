@@ -36,6 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +56,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.example.armoryboxkotline.Conection.Controller.CardEdition
 import com.example.armoryboxkotline.Conection.Controller.CardRoot
+import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.HeroesViewModel
 import com.example.armoryboxkotline.FakeTopBar
 import com.example.armoryboxkotline.R
@@ -102,6 +106,16 @@ fun SelectHeroScreen(onSelect: (String) -> Unit, onDismiss: () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HeroDisplayCard(card: CardRoot, imageUrl: String, onSelect: (String) -> Unit){
+
+    val cardsViewModel = viewModel<CardsViewModel>()
+
+    var imageUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(card.uniqueId) {
+        cardsViewModel.getFirstImageUrlDirect(card.uniqueId)
+        imageUrl = cardsViewModel.getFirstImageUrlDirect(card.uniqueId)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -131,60 +145,60 @@ fun HeroDisplayCard(card: CardRoot, imageUrl: String, onSelect: (String) -> Unit
                         .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
-                    /*
-                    if(card != null && imageUrl != null){
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(edition.imageUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Card image: ${card.name}",
-                            loading = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(30.dp),
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            error = {
-                                // Log error
-                                Log.e("ImageLoading", "Failed to load image: $imageUrl")
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.magnify), // Use an appropriate error icon
-                                        contentDescription = "Error loading image",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
-                    }else{
-                        Text(
-                            text = "Arte",
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }*/
+
                     Box (
                         modifier = Modifier
                             .width(75.dp)
-                            .height(80.dp),
+                            .height(80.dp)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.surface),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Arte",
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        if (imageUrl != null && imageUrl!!.isNotEmpty()) {
+                            // Cargar la imagen con placeholder para errores y carga
+                            SubcomposeAsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(imageUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Card image: ${card.name}",
+                                loading = {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(30.dp),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
+                                error = {
+                                    // Log error
+                                    Log.e("ImageLoading", "Failed to load image: $imageUrl")
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.magnify), // Use an appropriate error icon
+                                            contentDescription = "Error loading image",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            // Si no hay URL de imagen
+                            Text(
+                                text = "Arte",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }

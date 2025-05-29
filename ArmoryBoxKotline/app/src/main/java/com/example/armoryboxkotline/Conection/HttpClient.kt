@@ -7,7 +7,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
 object Config {
-    const val BASE_URL = "http://192.168.253.60:3000"
+    const val BASE_URL = "http://192.168.1.130:3000"
 }
 
 object HttpClientSingleton {

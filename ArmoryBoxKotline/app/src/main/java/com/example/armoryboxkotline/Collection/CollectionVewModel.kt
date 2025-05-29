@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-
+/*
 data class CollectionCard(
     val id: String,
     val name: String,
@@ -68,3 +68,4 @@ class CollectionViewModel : ViewModel() {
         updateFilteredCards()
     }
 }
+*/

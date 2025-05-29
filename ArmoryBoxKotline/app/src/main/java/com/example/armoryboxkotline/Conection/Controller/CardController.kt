@@ -76,7 +76,6 @@ class CardsViewModel : ViewModel() {
             }catch (e: Exception) {
                 _heroes.value = emptyList()
             }
-
         }
     }
     fun searchCard(name: String) {
@@ -119,8 +118,16 @@ class CardsViewModel : ViewModel() {
     }
 
     // Función para obtener la URL de la primera imagen disponible
-    fun getFirstImageUrl(cardId: String): String? {
-        return _cardImages.value[cardId]
+    suspend fun getFirstImageUrlDirect(cardId: String): String? {
+        return try {
+            val editionsList = searchEditions(cardId)
+            editionsList
+                .firstOrNull { it.imageUrl.isNotEmpty() }
+                ?.imageUrl
+        } catch (e: Exception) {
+            Log.e("CardsViewModel", "Error getting image for card $cardId: ${e.message}")
+            null
+        }
     }
 }
 

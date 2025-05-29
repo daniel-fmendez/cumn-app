@@ -240,7 +240,9 @@ fun CreateDeck(navController: NavController){
                                         }
                                     )
                                 }else{
-                                    HeroCard(heroId)
+                                    HeroCard(heroId, onDelete = {
+                                        heroId = "";
+                                    }, cardsViewModel)
                                 }
                             }
                         }
@@ -447,7 +449,8 @@ fun CreateDeck(navController: NavController){
                                         maxAllowed = maxAllowed,
                                         onQuantityChanged = { card, newQuantity ->
                                             updateCardQuantity(card, newQuantity)
-                                        }
+                                        },
+                                        cardsViewModel
                                     )
                                 }
                             }
@@ -504,7 +507,8 @@ fun CreateDeck(navController: NavController){
                                                 maxAllowed = maxAllowed,
                                                 onQuantityChanged = { c, newQuantity ->
                                                     updateCardQuantity(c, newQuantity)
-                                                }
+                                                },
+                                                cardsViewModel
                                             )
                                         } else {
                                             // Card is not in the deck, create a temporary DeckCardPair
@@ -524,7 +528,8 @@ fun CreateDeck(navController: NavController){
                                                 maxAllowed = maxCards - totalCards,
                                                 onQuantityChanged = { c, newQuantity ->
                                                     updateCardQuantity(c, newQuantity)
-                                                }
+                                                },
+                                                cardsViewModel
                                             )
                                         }
                                     }

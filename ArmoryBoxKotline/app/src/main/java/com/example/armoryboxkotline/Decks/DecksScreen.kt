@@ -1,5 +1,6 @@
 package com.example.armoryboxkotline.Decks
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,6 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,34 +32,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil3.compose.SubcomposeAsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.Deck
 import com.example.armoryboxkotline.Conection.Controller.DeckCard
 import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
 import com.example.armoryboxkotline.Conection.SessionManager
+import com.example.armoryboxkotline.R
 import com.example.armoryboxkotline.Screen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
-
-/*
-@Parcelize
-data class Card(
-    val id: String,
-    val name: String,
-    val type: String,
-    val pitch: Int = 1,
-    var quantity: Int = 0
-) : Parcelable {
-    fun contains(searchQuery: String, ignoreCase: Boolean): Boolean {
-        return name.contains(searchQuery,ignoreCase) ;
-    }
-}*/
-
-/*@Parcelize
-data class Deck(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val type: DeckType,
-    val cards: List<Card>
-) : Parcelable*/
 
 enum class DeckType (val cardLimit: Int){
     Blitz (40),
@@ -99,39 +86,12 @@ class SharedDeckViewModel : ViewModel() {
 @Composable
 fun DecksScreen(navController: NavController, sharedDeckViewModel: SharedDeckViewModel){
     val decksViewModel = viewModel<DecksViewModel>()
+    val cardsViewModel = viewModel<CardsViewModel>()
     val decks by decksViewModel.decks.collectAsState(initial = emptyList())
 
     LaunchedEffect(decksViewModel) {
         decksViewModel.userDecks(SessionManager.userId!!)
     }
-    /*
-    val decks = listOf(
-        Deck(
-            name = "Fai Blitz",
-            type = DeckType.Blitz,
-            cards = listOf(
-                Card(UUID.randomUUID().toString(), "Lava Burst", "Attack Action", 1, 3),
-                Card(UUID.randomUUID().toString(), "Blaze Headlong", "Attack Action", 1, 3)
-            )
-        ),
-        Deck(
-            name = "Bravo Classic",
-            type = DeckType.Classic,
-            cards = listOf(
-                Card(UUID.randomUUID().toString(), "Cranial Crush", "Attack Action", 2, 2),
-                Card(UUID.randomUUID().toString(), "Spinal Crush", "Attack Action", 3, 2),
-                Card(UUID.randomUUID().toString(), "Show Time!", "Action", 1, 1)
-            )
-        ),
-        Deck(
-            name = "Iyslander Blitz",
-            type = DeckType.Blitz,
-            cards = listOf(
-                Card(UUID.randomUUID().toString(), "Aether Icevein", "Wizard Action", 2, 3),
-                Card(UUID.randomUUID().toString(), "Frosting", "Wizard Action", 1, 3)
-            )
-        )
-    )*/
 
     Box (modifier = Modifier
         .fillMaxSize(),
@@ -219,9 +179,16 @@ fun DeckCard(
     deck: Deck
 ){
     val decksViewModel = viewModel<DecksViewModel>()
+    val cardsViewModel = viewModel<CardsViewModel>()
 
     val deckCardsMap by decksViewModel.deckCardsMap.collectAsState(initial = emptyMap())
     val thisDeckCards = deckCardsMap[deck.id] ?: emptyList()
+    var imageUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(deck.heroId) {
+        cardsViewModel.getFirstImageUrlDirect(deck.heroId)
+        imageUrl = cardsViewModel.getFirstImageUrlDirect(deck.heroId)
+    }
 
     LaunchedEffect(deck.id) {
         if (!deckCardsMap.containsKey(deck.id)) {
@@ -265,11 +232,50 @@ fun DeckCard(
                         .background(MaterialTheme.colorScheme.surface),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Arte Heroe",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    if (imageUrl != null && imageUrl!!.isNotEmpty()) {
+                        // Cargar la imagen con placeholder para errores y carga
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(imageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Card image: ${deck.name}",
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(30.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            error = {
+                                // Log error
+                                Log.e("ImageLoading", "Failed to load image: $imageUrl")
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.magnify), // Use an appropriate error icon
+                                        contentDescription = "Error loading image",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        // Si no hay URL de imagen
+                        Text(
+                            text = "Arte",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 

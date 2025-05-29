@@ -30,7 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.createGraph
 import androidx.navigation.navArgument
 import com.example.armoryboxkotline.Collection.CollectionScreen
-import com.example.armoryboxkotline.Collection.CollectionViewModel
+import com.example.armoryboxkotline.Conection.Controller.CollectionViewModel
 import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.Decks.CreateDeck
 import com.example.armoryboxkotline.Decks.DeckDetails
@@ -118,7 +118,7 @@ fun MainScreen() {
             composable(route = Screen.Collection.rout) {
                 val id = SessionManager.userId ?: -1
                 if (id != -1) {
-                    CollectionScreen(viewModel = collectionViewModel)  // <-- PASAMOS EL VIEWMODEL AQUÍ
+                    CollectionScreen(navController,collectionViewModel)  // <-- PASAMOS EL VIEWMODEL AQUÍ
                 } else {
                     EmpryScreen("Inicia sesión para ver tu colección")
                 }
