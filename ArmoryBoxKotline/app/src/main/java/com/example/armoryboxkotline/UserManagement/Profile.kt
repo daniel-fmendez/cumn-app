@@ -52,11 +52,21 @@ fun ProfileScreen(navController: NavController){
 
     val numberOfDecks = decks.size
     var nickname = SessionManager.nickname ?: ""
-    val numberOfCards = collection.size
+
+
+    fun getQuantity(): Int {
+        var quantity = 0
+        collection.forEach { card ->
+            quantity += card.quantity
+        }
+        return quantity
+    }
+    val numberOfCards = getQuantity()
 
     LaunchedEffect(Unit) {
         deckViewModel.userDecks(SessionManager.userId!!)
         collectionViewModel.userCollection(SessionManager.userId!!)
+
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
