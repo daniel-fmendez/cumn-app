@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -52,9 +53,12 @@ import androidx.navigation.NavController
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.example.armoryboxkotline.Collection.CollectionScreen
 import com.example.armoryboxkotline.Conection.Controller.CardEdition
 import com.example.armoryboxkotline.Conection.Controller.CardRoot
 import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
+import com.example.armoryboxkotline.Conection.Controller.CollectionViewModel
+import com.example.armoryboxkotline.Conection.SessionManager
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -66,9 +70,17 @@ fun DetailsScreen(navController: NavController, cardId: String){
     var editions = editionsMap[cardId].orEmpty()
     val scrollState = rememberLazyListState()
 
+    val collectionViewModel = viewModel<CollectionViewModel>()
+    val collection by collectionViewModel.collection.collectAsState(initial = emptyList())
+    val id = SessionManager.userId ?: -1
+    var buttonVisible by remember { mutableStateOf(true) }
     LaunchedEffect(cardId) {
         cardsViewModel.fetchCardById(cardId)
         cardsViewModel.getEditions(cardId)
+
+        if (id != -1) {
+            collectionViewModel.userCollection(id)
+        }
     }
     if(card == null){
         EmpryScreen("Problema al encontrar la carta")
@@ -144,31 +156,61 @@ fun DetailsScreen(navController: NavController, cardId: String){
                                 .padding(16.dp),
                         ) {
                             Column {
-                                Text(
-                                    text = thisCard.name,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(
-                                    modifier = Modifier.height(2.dp)
-                                )
-                                fun generateSubtitle(list: List<String> ): String {
-                                    var result = ""
-                                    list.forEach{ item ->
-                                        if(result.isEmpty()){
-                                            result += item
-                                        }else{
-                                            result += (" · "+item)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = thisCard.name,
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(
+                                            modifier = Modifier.height(2.dp)
+                                        )
+                                        fun generateSubtitle(list: List<String>): String {
+                                            var result = ""
+                                            list.forEach { item ->
+                                                if (result.isEmpty()) {
+                                                    result += item
+                                                } else {
+                                                    result += (" · " + item)
+                                                }
+                                            }
+                                            return result
+                                        }
+                                        Text(
+                                            text = generateSubtitle(thisCard.types),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    val id = SessionManager.userId ?: -1
+                                    if (id != -1) {
+                                        if(!collection.any { it.card_id == cardId }){
+                                            Button(
+                                                onClick = {
+                                                    collectionViewModel.updateCollection(id,cardId,1)
+                                                    buttonVisible = false
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary
+                                                ),
+                                                enabled = buttonVisible,
+                                                modifier = Modifier.alpha(if (buttonVisible) 1f else 0f)
+                                            ) {
+                                                Text(
+                                                    text = "Añadir",
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            }
                                         }
                                     }
-                                    return result
                                 }
-                                Text(
-                                    text = generateSubtitle(thisCard.types),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+
                                 Spacer(
                                     modifier = Modifier.height(16.dp)
                                 )
@@ -177,38 +219,36 @@ fun DetailsScreen(navController: NavController, cardId: String){
                                     modifier = Modifier
                                         .fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp) // Añade espaciado vertical
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    if(!thisCard.pitch.isEmpty()){
-                                        ValueBox("Pitch",thisCard.pitch)
+                                    if (!thisCard.pitch.isEmpty()) {
+                                        ValueBox("Pitch", thisCard.pitch)
                                     }
-                                    if(!thisCard.cost.isEmpty()){
-                                        ValueBox("Cost",thisCard.cost)
+                                    if (!thisCard.cost.isEmpty()) {
+                                        ValueBox("Cost", thisCard.cost)
                                     }
-                                    if(!thisCard.power.isEmpty()){
-                                        ValueBox("Power",thisCard.power)
+                                    if (!thisCard.power.isEmpty()) {
+                                        ValueBox("Power", thisCard.power)
                                     }
-                                    if(!thisCard.defense.isEmpty()){
-                                        ValueBox("Defense",thisCard.defense)
+                                    if (!thisCard.defense.isEmpty()) {
+                                        ValueBox("Defense", thisCard.defense)
                                     }
-                                    if(!thisCard.health.isEmpty()){
-                                        ValueBox("Health",thisCard.health)
+                                    if (!thisCard.health.isEmpty()) {
+                                        ValueBox("Health", thisCard.health)
                                     }
-                                    if(!thisCard.intelligence.isEmpty()){
-                                        ValueBox("Intelligence",thisCard.intelligence)
+                                    if (!thisCard.intelligence.isEmpty()) {
+                                        ValueBox("Intelligence", thisCard.intelligence)
                                     }
-                                    if(!thisCard.arcane.isEmpty()){
-                                        ValueBox("Arcane",thisCard.arcane)
+                                    if (!thisCard.arcane.isEmpty()) {
+                                        ValueBox("Arcane", thisCard.arcane)
                                     }
                                 }
 
                                 Spacer(
                                     modifier = Modifier.height(16.dp)
                                 )
-
                                 CardText(thisCard.functionalText)
                             }
-
                         }
                         fun getSets(editions: List<CardEdition>): Map<String, List<CardEdition>> {
                             return editions.groupBy { it.setId }
@@ -553,7 +593,7 @@ fun VersionCard(cardEdition: CardEdition) {
                     )
                 }
             }
-
+            /*
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -576,7 +616,8 @@ fun VersionCard(cardEdition: CardEdition) {
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
+            }*/
+
         }
     }
 }

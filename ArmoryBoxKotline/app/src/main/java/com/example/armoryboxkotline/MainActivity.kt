@@ -54,7 +54,6 @@ class MainActivity : ComponentActivity() {
 
             }
         }
-
     }
 }
 
@@ -118,7 +117,7 @@ fun MainScreen() {
             composable(route = Screen.Collection.rout) {
                 val id = SessionManager.userId ?: -1
                 if (id != -1) {
-                    CollectionScreen(navController,collectionViewModel)  // <-- PASAMOS EL VIEWMODEL AQUÍ
+                    CollectionScreen(navController)  // <-- PASAMOS EL VIEWMODEL AQUÍ
                 } else {
                     EmpryScreen("Inicia sesión para ver tu colección")
                 }

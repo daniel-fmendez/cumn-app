@@ -106,8 +106,10 @@ class CardsViewModel : ViewModel() {
     }
     suspend fun getCardByIdDirect(cardId: String): CardRoot? {
         return try {
-            getCardById(cardId) // tu función de red
+            val card = getCardById(cardId)
+            card
         } catch (e: Exception) {
+            Log.e("CardsViewModel", "Error getting card $cardId: ${e.message}")
             null
         }
     }

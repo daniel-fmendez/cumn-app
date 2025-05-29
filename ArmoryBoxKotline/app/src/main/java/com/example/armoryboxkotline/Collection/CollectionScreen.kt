@@ -22,23 +22,36 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.example.armoryboxkotline.Conection.Controller.CardCollection
+import com.example.armoryboxkotline.Conection.Controller.CardRoot
+import com.example.armoryboxkotline.Conection.Controller.CardsViewModel
 import com.example.armoryboxkotline.Conection.Controller.CollectionViewModel
+import com.example.armoryboxkotline.Conection.Controller.DecksViewModel
+import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.R
 import com.example.armoryboxkotline.Screen
+import kotlinx.coroutines.async
 
 @Composable
 fun CollectionScreen(
     navController: NavController,
-    viewModel: CollectionViewModel // ahora se recibe el ViewModel desde fuera
+     // ahora se recibe el ViewModel desde fuera
 ) {
+    val decksViewModel = viewModel<DecksViewModel>()
+    val cardsViewModel = viewModel<CardsViewModel>()
+    val collectionViewModel = viewModel<CollectionViewModel>()
 
-    /*val searchQuery by viewModel.searchQuery.collectAsState()
-    val cards by viewModel.filteredCards.collectAsState()*/
+    val cards by collectionViewModel.collection.collectAsState(initial = emptyList())
+
+
+    LaunchedEffect (cards) {
+        collectionViewModel.userCollection(SessionManager.userId!!)
+    }
 
     Column(
         modifier = Modifier
@@ -50,12 +63,6 @@ fun CollectionScreen(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        /*OutlinedTextField(
-            value = searchQuery,
-            onValueChange = viewModel::setSearchQuery,
-            label = { Text("Buscar cartas") },
-            modifier = Modifier.fillMaxWidth()
-        )*/
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -65,58 +72,48 @@ fun CollectionScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            /*if (cards.isEmpty()) {
+            if (cards.isEmpty()) {
                 Text("No hay cartas que coincidan.", modifier = Modifier.padding(8.dp))
             } else {
                 cards.forEach { card ->
                     CardItem(
-                        card = card,
-                        onIncrement = { viewModel.incrementCardQuantity(card.id) },
-                        onDecrement = { viewModel.decrementCardQuantity(card.id) }
+                        navController,
+                        cardCollection = card,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
-            }*/
+            }
         }
     }
 }
 
 @Composable
 fun CardItem(
-    card: CardCollection,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
+    navController: NavController,
+    cardCollection: CardCollection,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(card.card_id, style = MaterialTheme.typography.titleMedium)
-            }
+    val collectionViewModel = viewModel<CollectionViewModel>()
+    val cardsViewModel = viewModel<CardsViewModel>()
+    var imageUrl by remember { mutableStateOf<String?>(null) }
+    var card by remember { mutableStateOf<CardRoot?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
 
-            IconButton(onClick = onDecrement, enabled = card.quantity > 0) {
-                Icon(imageVector = Icons.Default.Remove, contentDescription = "Quitar")
-            }
-            Text("${card.quantity}", style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = onIncrement) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir")
-            }
+    LaunchedEffect(cardCollection.card_id) {
+        isLoading = true
+        try {
+            // Ejecutar ambas operaciones en paralelo si es posible
+            val imageUrlDeferred = async { cardsViewModel.getFirstImageUrlDirect(cardCollection.card_id) }
+            val cardDeferred = async { cardsViewModel.getCardByIdDirect(cardCollection.card_id) }
+
+            imageUrl = imageUrlDeferred.await()
+            card = cardDeferred.await()
+        } catch (e: Exception) {
+            Log.e("CardItem", "Error loading card data: ${e.message}")
+        } finally {
+            isLoading = false
         }
     }
-}
 
-@Preview
-@Composable
-fun PreviewCollection () {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -135,20 +132,20 @@ fun PreviewCollection () {
                     .clip(RoundedCornerShape(2.dp))
                     .background(MaterialTheme.colorScheme.surface)
                     .clickable {
-                        //Pasar la id de la carta
-                        //navController.navigate(Screen.Details.createRoute(card.uniqueId))
+                        card?.let {
+                            // Pasar la id de la carta
+                            navController.navigate(Screen.Details.createRoute(it.uniqueId))
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                var imageUrl: String? = null;
-                if (imageUrl != null && imageUrl.isNotEmpty()) {
-                    // Cargar la imagen con placeholder para errores y carga
+                if (imageUrl != null && imageUrl!!.isNotEmpty()) {
                     SubcomposeAsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(imageUrl)
                             .crossfade(true)
                             .build(),
-                        contentDescription = "Card image: {card.name}",
+                        contentDescription = "Card image",
                         loading = {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -161,14 +158,13 @@ fun PreviewCollection () {
                             }
                         },
                         error = {
-                            // Log error
                             Log.e("ImageLoading", "Failed to load image: $imageUrl")
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.magnify), // Use an appropriate error icon
+                                    painter = painterResource(R.drawable.magnify),
                                     contentDescription = "Error loading image",
                                     tint = MaterialTheme.colorScheme.error
                                 )
@@ -178,7 +174,6 @@ fun PreviewCollection () {
                         contentScale = ContentScale.Fit
                     )
                 } else {
-                    // Si no hay URL de imagen
                     Text(
                         text = "Arte",
                         fontSize = 10.sp,
@@ -186,25 +181,57 @@ fun PreviewCollection () {
                     )
                 }
             }
+
             Spacer(Modifier.width(12.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text("card.name", style = MaterialTheme.typography.titleMedium)
-                Text("card.type", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                if (isLoading) {
+                    Text("Cargando...", style = MaterialTheme.typography.titleMedium)
+                } else {
+                    card?.let { cardData ->
+                        Text(cardData.name, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            generateSubtitle(cardData.types),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } ?: run {
+                        Text("Error al cargar", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
             }
 
-
-            /*IconButton(onClick = onDecrement, enabled = card.quantity > 0) {
-                Icon(imageVector = Icons.Default.Remove, contentDescription = "Quitar")
-            }*/
-            Icon(imageVector = Icons.Default.Remove, contentDescription = "Quitar")
-            Text("4", style = MaterialTheme.typography.titleMedium)
-            Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir")
-            /*IconButton(onClick = onIncrement) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir")
-            }*/
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        collectionViewModel.updateCollection(SessionManager.userId!!,cardCollection.card_id,cardCollection.quantity-1)
+                        collectionViewModel.userCollection(SessionManager.userId!!)
+                    },
+                    enabled = cardCollection.quantity > 0
+                ) {
+                    Icon(imageVector = Icons.Default.Remove, contentDescription = "Quitar")
+                }
+                Text(
+                    cardCollection.quantity.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                IconButton(onClick = {
+                    collectionViewModel.updateCollection(SessionManager.userId!!,cardCollection.card_id,cardCollection.quantity+1)
+                    collectionViewModel.userCollection(SessionManager.userId!!)
+                }) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Añadir")
+                }
+            }
         }
     }
+}
+
+// Función auxiliar fuera del Composable
+private fun generateSubtitle(list: List<String>): String {
+    return list.joinToString(" · ")
 }
