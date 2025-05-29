@@ -1,0 +1,2 @@
+include ':build.gradle'
+project(':build.gradle').projectDir = new File(rootDir, 'ArmoryBoxKotline/app/libs/opencv-4.11.0-android-sdk/OpenCV-android-sdk/sdk/build.gradle')

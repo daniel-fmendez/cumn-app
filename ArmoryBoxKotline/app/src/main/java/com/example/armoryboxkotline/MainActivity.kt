@@ -30,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.createGraph
 import androidx.navigation.navArgument
 import com.example.armoryboxkotline.Collection.CollectionScreen
+import com.example.armoryboxkotline.Collection.CollectionViewModel
 import com.example.armoryboxkotline.Conection.SessionManager
 import com.example.armoryboxkotline.Decks.CreateDeck
 import com.example.armoryboxkotline.Decks.DeckDetails
@@ -70,8 +71,13 @@ fun MainScreen() {
     val showTopAppBar = when (currentRoute) {
         Screen.Home.rout, Screen.Collection.rout -> true
         Screen.Search.rout, Screen.Decks.rout -> false
-        else -> false  // Default behavior
+        else -> false
     }
+
+    // Crear los ViewModels una sola vez aquí, para que persistan
+    val sharedDeckViewModel: SharedDeckViewModel = viewModel()
+    val collectionViewModel: CollectionViewModel = viewModel()
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -88,7 +94,6 @@ fun MainScreen() {
         val contentPadding = if (showTopAppBar) {
             innerPadding
         } else {
-            // Conserva solo el padding inferior para el BottomNavigationBar
             PaddingValues(
                 bottom = innerPadding.calculateBottomPadding(),
                 start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
@@ -96,7 +101,6 @@ fun MainScreen() {
             )
         }
         val graph = navController.createGraph(startDestination = Screen.Home.rout) {
-            val sharedDeckViewModel: SharedDeckViewModel = viewModel()
             composable(route = Screen.Home.rout) {
                 HomeScreen(navController)
             }
@@ -114,7 +118,7 @@ fun MainScreen() {
             composable(route = Screen.Collection.rout) {
                 val id = SessionManager.userId ?: -1
                 if (id != -1) {
-                    CollectionScreen()
+                    CollectionScreen(viewModel = collectionViewModel)  // <-- PASAMOS EL VIEWMODEL AQUÍ
                 } else {
                     EmpryScreen("Inicia sesión para ver tu colección")
                 }
@@ -150,7 +154,6 @@ fun MainScreen() {
             graph = graph,
             modifier = Modifier.padding(innerPadding)
         )
-
     }
 }
 

@@ -1,6 +1,6 @@
 package com.example.armoryboxkotline.Conection
 
 object SessionManager {
-    var userId: Int? = null
-    var nickname: String? = null
+    var userId: Int? = 1
+    var nickname: String? = "pepe"
 }
