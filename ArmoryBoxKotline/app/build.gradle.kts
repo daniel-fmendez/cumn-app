@@ -92,4 +92,8 @@ dependencies {
     implementation ("androidx.compose.material3:material3:1.1.0") // o material3 si usas
     implementation ("androidx.compose.material:material-icons-extended:1.4.3")
 
+    //BoofCV
+    implementation("org.boofcv:boofcv-android:0.42")
+    implementation("org.boofcv:boofcv-io:0.42") // ⬅️ Esta línea soluciona el problema de 'io'
+
 }

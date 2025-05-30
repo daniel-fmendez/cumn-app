@@ -5,10 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
-import androidx.compose.foundation.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,11 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.createGraph
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.armoryboxkotline.Collection.CollectionScreen
 import com.example.armoryboxkotline.Conection.Controller.CollectionViewModel
@@ -41,25 +37,17 @@ import com.example.armoryboxkotline.UserManagement.EditProfileScreen
 import com.example.armoryboxkotline.UserManagement.ProfileScreen
 import com.example.armoryboxkotline.ui.theme.ArmoryBoxKotlineTheme
 
-
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
         setContent {
             ArmoryBoxKotlineTheme {
                 MainScreen()
-
             }
         }
     }
 }
-
-/**
- * Representacion de juguete de los datos de la carta
- */
 
 @Composable
 fun MainScreen() {
@@ -73,7 +61,6 @@ fun MainScreen() {
         else -> false
     }
 
-    // Crear los ViewModels una sola vez aquí, para que persistan
     val sharedDeckViewModel: SharedDeckViewModel = viewModel()
     val collectionViewModel: CollectionViewModel = viewModel()
 
@@ -99,7 +86,12 @@ fun MainScreen() {
                 end = innerPadding.calculateEndPadding(LocalLayoutDirection.current)
             )
         }
-        val graph = navController.createGraph(startDestination = Screen.Home.rout) {
+
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Home.rout,
+            modifier = Modifier.padding(innerPadding)
+        ) {
             composable(route = Screen.Home.rout) {
                 HomeScreen(navController)
             }
@@ -117,7 +109,7 @@ fun MainScreen() {
             composable(route = Screen.Collection.rout) {
                 val id = SessionManager.userId ?: -1
                 if (id != -1) {
-                    CollectionScreen(navController)  // <-- PASAMOS EL VIEWMODEL AQUÍ
+                    CollectionScreen(navController)
                 } else {
                     EmpryScreen("Inicia sesión para ver tu colección")
                 }
@@ -145,21 +137,15 @@ fun MainScreen() {
                 CreateDeck(navController)
             }
             composable(route = Screen.Scanner.rout) {
-                ScannerScreen()
+                ScannerScreen() // Asegúrate de que esté definido en otro archivo.
             }
         }
-        NavHost(
-            navController = navController,
-            graph = graph,
-            modifier = Modifier.padding(innerPadding)
-        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(navController: NavController) {
-    //val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     TopAppBar(
         title = {
             Text(
@@ -173,7 +159,7 @@ fun TopAppBar(navController: NavController) {
             containerColor = MaterialTheme.colorScheme.surface
         ),
         actions = {
-            Box (
+            Box(
                 modifier = Modifier
                     .padding(end = 16.dp)
                     .size(34.dp)
@@ -184,14 +170,12 @@ fun TopAppBar(navController: NavController) {
                         shape = CircleShape
                     )
                     .clickable {
-                        //Profile
-                        if(SessionManager.userId!=null){
+                        if (SessionManager.userId != null) {
                             navController.navigate(Screen.Profile.rout)
-                        }else{
+                        } else {
                             navController.navigate(Screen.AccessScreen.rout)
                         }
-                   },
-
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -203,10 +187,12 @@ fun TopAppBar(navController: NavController) {
         }
     )
 }
+
 @Composable
 fun BottomAppBar() {
-
+    // Deja en blanco o implementa tu barra inferior
 }
+
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
